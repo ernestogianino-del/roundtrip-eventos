@@ -64,60 +64,48 @@
   </div>
   
   <script>
-    // Validación de WhatsApp
-    const whatsappInput = document.getElementById('whatsappInput');
-    whatsappInput.addEventListener('input', (e) => {
-      e.target.value = e.target.value.replace(/[^0-9+\s]/g, '');
+document.getElementById('leadForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const btn = document.getElementById('btn');
+  const msg = document.getElementById('msg');
+  
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  msg.textContent = '';
+  
+  const formData = new FormData(this);
+  const data = {
+    nombre: formData.get('nombre'),
+    whatsapp: formData.get('whatsapp'),
+    correo: formData.get('email'),
+    interes: formData.get('interes')
+  };
+  
+  try {
+    const response = await fetch('https://roundtrip.app.n8n.cloud/webhook/c23f088e-0d08-40ae-bec0-eef4dff21802', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
     });
     
-    // IMPORTANTE: Reemplaza esta URL por tu Web App de Google Apps Script
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0TymgRwqO15QKcn4JitF8ZSQMStN4wW3tAwfNxTDFAmPsMshTI9rZiC81p7QTKGnm/exec";    
-    const form = document.getElementById("leadForm");
-    const btn = document.getElementById("btn");
-    const msg = document.getElementById("msg");
-    
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      msg.innerHTML = "";
-      btn.disabled = true;
-      btn.textContent = "Enviando...";
-      
-      const data = Object.fromEntries(new FormData(form).entries());
-      
-      // Validar honeypot anti-spam
-      if(data.bot_trap) {
-        msg.innerHTML = '<span class="err">❌ Error detectado</span>';
-        btn.disabled = false;
-        btn.textContent = "Quiero acceso";
-        return;
-      }
-      
-      data.timestamp = new Date().toISOString();
-      data.userAgent = navigator.userAgent;
-      
-      try {
-        const res = await fetch(WEB_APP_URL, {
-          method: "POST",
-          mode: "cors",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(data)
-        });
-        
-        const out = await res.json();
-        
-        if(!out.ok) throw new Error(out.error || "Error guardando datos");
-        
-        msg.innerHTML = '<span class="ok">✅ ¡Listo! Te registraste correctamente.</span>';
-        form.reset();
-        
-      } catch(err) {
-        console.error(err);
-        msg.innerHTML = '<span class="err">❌ No se pudo enviar. Verifica tu conexión.</span>';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Quiero acceso";
-      }
-    });
+    if (response.ok) {
+      msg.innerHTML = '<div class="ok">✓ ¡Listo! Recibirás las invitaciones pronto.</div>';
+      this.reset();
+    } else {
+      throw new Error('Error en el servidor');
+    }
+  } catch (error) {
+    msg.innerHTML = '<div class="err">❌ No se pudo enviar. Verifica tu conexión.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Quiero acceso';
+  }
+});
+</script>
+
   </script>
 </body>
 </html>
