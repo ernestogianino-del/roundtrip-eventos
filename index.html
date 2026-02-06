@@ -88,11 +88,44 @@
     return v;
   }
 
-  form.addEventListener("submit", (e) => {
+  function jsonpSubmit(payload) {
+    return new Promise((resolve) => {
+      const cbName = "__rt_cb_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+
+      window[cbName] = (res) => {
+        cleanup();
+        resolve(res);
+      };
+
+      function cleanup() {
+        try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      const qs = new URLSearchParams({
+        submit: "1",
+        callback: cbName,
+        timestamp: payload.timestamp,
+        nombre: payload.nombre,
+        whatsapp: payload.whatsapp,
+        email: payload.email,
+        interes: payload.interes,
+        userAgent: payload.userAgent,
+        pageUrl: payload.pageUrl,
+        source: payload.source
+      }).toString();
+
+      const script = document.createElement("script");
+      script.src = WEB_APP_URL + "?" + qs;
+      script.onerror = () => { cleanup(); resolve({ ok: false, status: "network_error" }); };
+      document.body.appendChild(script);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     msg.innerHTML = "";
 
-    // honeypot anti-bots
     const botTrapEl = form.querySelector('input[name="bot_trap"]');
     if (botTrapEl && botTrapEl.value.trim() !== "") return;
 
@@ -113,24 +146,26 @@
       source: "landing"
     };
 
-    // envía en background (no bloquea UI)
-    try {
-      fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: new URLSearchParams(payload).toString()
-      });
-    } catch (_) {}
+    // enviamos YA (sin CORS)
+    const resultPromise = jsonpSubmit(payload);
 
-    // ✅ demora “natural” antes de confirmar (2.5s)
-    const DELAY_MS = 2500; // cambia a 3000 si quieres 3s
+    // demora “natural” 2.5s
+    const DELAY_MS = 2500;
 
-    setTimeout(() => {
-      msg.innerHTML = '<div class="ok">✅ Recibido. Te escribimos pronto.</div>';
+    setTimeout(async () => {
+      const res = await resultPromise;
+
+      if (res && res.ok && res.status === "duplicate") {
+        msg.innerHTML = '<div class="ok">✅ Ya estabas registrado. Te escribimos pronto.</div>';
+      } else if (res && res.ok) {
+        msg.innerHTML = '<div class="ok">✅ Recibido. Te escribimos pronto.</div>';
+      } else {
+        msg.innerHTML = '<div class="err">❌ No se pudo enviar. Reintenta.</div>';
+      }
+
       btn.disabled = false;
       btn.textContent = "Quiero acceso";
-      form.reset();
+      if (res && res.ok) form.reset();
     }, DELAY_MS);
   });
 </script>
