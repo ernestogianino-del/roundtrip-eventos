@@ -36,7 +36,6 @@
 
       <div class="card">
         <form id="leadForm" autocomplete="on">
-          <!-- Honeypot anti-bot -->
           <label class="honeypot">
             No llenar
             <input type="text" name="bot_trap" tabindex="-1" autocomplete="off" />
@@ -66,7 +65,8 @@
             <option>Próximos eventos</option>
           </select>
 
-          <!-- Hidden extras -->
+          <!-- Extras -->
+          <input type="hidden" name="rid" id="rid" />
           <input type="hidden" name="timestamp" id="timestamp" />
           <input type="hidden" name="userAgent" id="userAgent" />
           <input type="hidden" name="pageUrl" id="pageUrl" />
@@ -76,14 +76,12 @@
           <div id="msg"></div>
         </form>
 
-        <!-- Iframe oculto para enviar sin CORS + recibir confirmación -->
         <iframe id="hiddenFrame" name="hiddenFrame" style="display:none;"></iframe>
       </div>
     </div>
   </div>
 
   <script>
-    // ✅ Nueva implementación (/exec)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
 
     const form = document.getElementById("leadForm");
@@ -91,9 +89,13 @@
     const msg = document.getElementById("msg");
     const whatsappInput = document.getElementById("whatsappInput");
 
+    const ridEl = document.getElementById("rid");
     const timestampEl = document.getElementById("timestamp");
     const userAgentEl = document.getElementById("userAgent");
     const pageUrlEl = document.getElementById("pageUrl");
+
+    let pendingRid = "";
+    let fallbackTimer = null;
 
     function normalizeWhatsApp(value) {
       if (!value) return "";
@@ -104,22 +106,35 @@
       return v;
     }
 
+    function makeRid() {
+      // compatible sin crypto.randomUUID
+      return "rid_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+    }
+
+    function setIdle() {
+      btn.disabled = false;
+      btn.textContent = "Quiero acceso";
+      pendingRid = "";
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+
     whatsappInput.addEventListener("blur", () => {
       whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
     });
 
-    // Recibe confirmación real desde Apps Script (iframe -> postMessage)
     window.addEventListener("message", (event) => {
-      // Los web apps pueden responder desde script.google.com o googleusercontent.com
-      const okOrigin =
-        event.origin === "https://script.google.com" ||
-        event.origin === "https://script.googleusercontent.com";
-
-      if (!okOrigin) return;
+      // Acepta script.google.com y CUALQUIER subdominio googleusercontent.com
+      let host = "";
+      try { host = new URL(event.origin).hostname; } catch (_) {}
+      const allowed = host === "script.google.com" || host.endsWith("googleusercontent.com");
+      if (!allowed) return;
 
       const data = event.data || {};
-      btn.disabled = false;
-      btn.textContent = "Quiero acceso";
+      if (!data || typeof data !== "object") return;
+
+      // valida que sea respuesta del envío actual
+      if (pendingRid && data.rid && data.rid !== pendingRid) return;
 
       if (data.ok) {
         msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
@@ -127,30 +142,36 @@
       } else {
         msg.innerHTML = `<div class="err">❌ No se pudo registrar. ${data.error ? ("Error: " + data.error) : ""}</div>`;
       }
+      setIdle();
     });
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       msg.innerHTML = "";
 
-      // Honeypot
       const botTrap = form.querySelector('input[name="bot_trap"]').value;
       if (botTrap && botTrap.trim() !== "") return;
 
       btn.disabled = true;
       btn.textContent = "Enviando...";
 
-      // Set hidden fields
       whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
+
+      pendingRid = makeRid();
+      ridEl.value = pendingRid;
       timestampEl.value = new Date().toISOString();
       userAgentEl.value = navigator.userAgent;
       pageUrlEl.value = location.href;
 
-      // Enviar el form al web app via iframe (sin CORS)
+      // fallback: si por cualquier motivo no llega postMessage, libera el botón
+      fallbackTimer = setTimeout(() => {
+        msg.innerHTML = '<div class="ok">✅ Enviado. (Si no ves confirmación, revisa tu Google Sheet; el registro puede tardar unos segundos)</div>';
+        setIdle();
+      }, 8000);
+
       form.action = WEB_APP_URL;
       form.method = "POST";
       form.target = "hiddenFrame";
-
       form.submit();
     });
   </script>
