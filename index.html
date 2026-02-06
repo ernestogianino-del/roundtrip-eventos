@@ -113,10 +113,7 @@
       source: "landing"
     };
 
-    // ✅ confirmación inmediata (sin esperar respuesta)
-    msg.innerHTML = '<div class="ok">✅ Recibido. Te escribimos pronto.</div>';
-
-    // enviar en background
+    // envía en background (no bloquea UI)
     try {
       fetch(WEB_APP_URL, {
         method: "POST",
@@ -126,12 +123,15 @@
       });
     } catch (_) {}
 
-    // liberar rápido UI
+    // ✅ demora “natural” antes de confirmar (2.5s)
+    const DELAY_MS = 2500; // cambia a 3000 si quieres 3s
+
     setTimeout(() => {
+      msg.innerHTML = '<div class="ok">✅ Recibido. Te escribimos pronto.</div>';
       btn.disabled = false;
       btn.textContent = "Quiero acceso";
       form.reset();
-    }, 2500);
+    }, DELAY_MS);
   });
 </script>
 </body>
