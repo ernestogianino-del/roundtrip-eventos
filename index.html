@@ -71,120 +71,68 @@
       </div>
     </div>
   </div>
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
 
-  <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
+  const form = document.getElementById("leadForm");
+  const btn = document.getElementById("btn");
+  const msg = document.getElementById("msg");
+  const whatsappInput = document.getElementById("whatsappInput");
 
-    const form = document.getElementById("leadForm");
-    const btn = document.getElementById("btn");
-    const msg = document.getElementById("msg");
-    const whatsappInput = document.getElementById("whatsappInput");
+  function normalizeWhatsApp(value) {
+    if (!value) return "";
+    let v = String(value).trim();
+    v = v.replace(/[^\d+]/g, "");
+    if (/^51\d{8,}$/.test(v)) v = "+" + v;
+    if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
+    return v;
+  }
 
-    function normalizeWhatsApp(value) {
-      if (!value) return "";
-      let v = String(value).trim();
-      v = v.replace(/[^\d+]/g, "");
-      if (/^51\d{8,}$/.test(v)) v = "+" + v;
-      if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
-      return v;
-    }
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    msg.innerHTML = "";
 
-    function makeRid() {
-      return "rid_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-    }
+    // honeypot anti-bots
+    const botTrapEl = form.querySelector('input[name="bot_trap"]');
+    if (botTrapEl && botTrapEl.value.trim() !== "") return;
 
-    function jsonpCheck(rid, attempt, maxAttempts) {
-      return new Promise((resolve) => {
-        const cbName = "__rt_cb_" + rid.replace(/[^\w]/g, "") + "_" + attempt;
+    btn.disabled = true;
+    btn.textContent = "Enviando...";
 
-        window[cbName] = (res) => {
-          cleanup();
-          resolve(res);
-        };
+    whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
 
-        function cleanup() {
-          try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
-          if (script && script.parentNode) script.parentNode.removeChild(script);
-        }
+    const fd = new FormData(form);
+    const payload = {
+      timestamp: new Date().toISOString(),
+      nombre: (fd.get("nombre") || "").toString().trim(),
+      whatsapp: (fd.get("whatsapp") || "").toString().trim(),
+      email: (fd.get("email") || "").toString().trim(),
+      interes: (fd.get("interes") || "").toString().trim(),
+      userAgent: navigator.userAgent,
+      pageUrl: location.href,
+      source: "landing"
+    };
 
-        const script = document.createElement("script");
-        script.src =
-          WEB_APP_URL +
-          "?check=1" +
-          "&rid=" + encodeURIComponent(rid) +
-          "&callback=" + encodeURIComponent(cbName) +
-          "&t=" + Date.now();
+    // ✅ confirmación inmediata (sin esperar respuesta)
+    msg.innerHTML = '<div class="ok">✅ Recibido. Te escribimos pronto.</div>';
 
-        script.onerror = () => {
-          cleanup();
-          resolve({ ok: false, rid, status: "error" });
-        };
-
-        document.body.appendChild(script);
+    // enviar en background
+    try {
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams(payload).toString()
       });
-    }
+    } catch (_) {}
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      msg.innerHTML = "";
-
-      const botTrap = form.querySelector('input[name="bot_trap"]').value;
-      if (botTrap && botTrap.trim() !== "") return;
-
-      btn.disabled = true;
-      btn.textContent = "Enviando...";
-
-      whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
-
-      const fd = new FormData(form);
-      const rid = makeRid();
-
-      const payload = {
-        rid,
-        timestamp: new Date().toISOString(),
-        nombre: (fd.get("nombre") || "").toString().trim(),
-        whatsapp: (fd.get("whatsapp") || "").toString().trim(),
-        email: (fd.get("email") || "").toString().trim(),
-        interes: (fd.get("interes") || "").toString().trim(),
-        userAgent: navigator.userAgent,
-        pageUrl: location.href,
-        source: "landing",
-        bot_trap: "" // no enviar el honeypot real
-      };
-
-      try {
-        // POST (sin leer respuesta)
-        await fetch(WEB_APP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: new URLSearchParams(payload).toString()
-        });
-
-        // Confirmación real vía JSONP check (hasta ~6s)
-        let confirmed = false;
-        const maxAttempts = 10;
-
-        for (let i = 1; i <= maxAttempts; i++) {
-          const res = await jsonpCheck(rid, i, maxAttempts);
-          if (res && res.ok) { confirmed = true; break; }
-          await new Promise(r => setTimeout(r, 550));
-        }
-
-        if (confirmed) {
-          msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
-          form.reset();
-        } else {
-          msg.innerHTML = '<div class="ok">✅ Registro enviado. (Confirmación en proceso: revisa el Sheet si no aparece en unos segundos.)</div>';
-        }
-
-      } catch (err) {
-        msg.innerHTML = '<div class="err">❌ No se pudo enviar. Revisa tu conexión.</div>';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Quiero acceso";
-      }
-    });
-  </script>
+    // liberar rápido UI
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = "Quiero acceso";
+      form.reset();
+    }, 900);
+  });
+</script>
 </body>
 </html>
