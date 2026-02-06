@@ -36,7 +36,7 @@
 
       <div class="card">
         <form id="leadForm" autocomplete="on">
-          <!-- Honeypot anti-bots -->
+          <!-- Honeypot anti-bot -->
           <label class="honeypot">
             No llenar
             <input type="text" name="bot_trap" tabindex="-1" autocomplete="off" />
@@ -66,15 +66,24 @@
             <option>Próximos eventos</option>
           </select>
 
+          <!-- Hidden extras -->
+          <input type="hidden" name="timestamp" id="timestamp" />
+          <input type="hidden" name="userAgent" id="userAgent" />
+          <input type="hidden" name="pageUrl" id="pageUrl" />
+          <input type="hidden" name="source" value="landing" />
+
           <button id="btn" type="submit">Quiero acceso</button>
           <div id="msg"></div>
         </form>
+
+        <!-- Iframe oculto para enviar sin CORS + recibir confirmación -->
+        <iframe id="hiddenFrame" name="hiddenFrame" style="display:none;"></iframe>
       </div>
     </div>
   </div>
 
   <script>
-    // ✅ Tu Google Apps Script Web App (/exec)
+    // ✅ Nueva implementación (/exec)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
 
     const form = document.getElementById("leadForm");
@@ -82,15 +91,15 @@
     const msg = document.getElementById("msg");
     const whatsappInput = document.getElementById("whatsappInput");
 
-    // Normaliza WhatsApp a formato simple (solo dígitos con + opcional)
+    const timestampEl = document.getElementById("timestamp");
+    const userAgentEl = document.getElementById("userAgent");
+    const pageUrlEl = document.getElementById("pageUrl");
+
     function normalizeWhatsApp(value) {
       if (!value) return "";
       let v = String(value).trim();
-      // deja solo dígitos y +
       v = v.replace(/[^\d+]/g, "");
-      // si empieza con 51 sin +, agrega +
       if (/^51\d{8,}$/.test(v)) v = "+" + v;
-      // si no empieza con + y tiene 9 dígitos (Perú), agrega +51
       if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
       return v;
     }
@@ -99,51 +108,50 @@
       whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
     });
 
-    form.addEventListener("submit", async (e) => {
+    // Recibe confirmación real desde Apps Script (iframe -> postMessage)
+    window.addEventListener("message", (event) => {
+      // Los web apps pueden responder desde script.google.com o googleusercontent.com
+      const okOrigin =
+        event.origin === "https://script.google.com" ||
+        event.origin === "https://script.googleusercontent.com";
+
+      if (!okOrigin) return;
+
+      const data = event.data || {};
+      btn.disabled = false;
+      btn.textContent = "Quiero acceso";
+
+      if (data.ok) {
+        msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
+        form.reset();
+      } else {
+        msg.innerHTML = `<div class="err">❌ No se pudo registrar. ${data.error ? ("Error: " + data.error) : ""}</div>`;
+      }
+    });
+
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
       msg.innerHTML = "";
 
-      // Honeypot: si lo llenan, es bot → salir silencioso
+      // Honeypot
       const botTrap = form.querySelector('input[name="bot_trap"]').value;
       if (botTrap && botTrap.trim() !== "") return;
 
       btn.disabled = true;
       btn.textContent = "Enviando...";
 
-      const fd = new FormData(form);
+      // Set hidden fields
+      whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
+      timestampEl.value = new Date().toISOString();
+      userAgentEl.value = navigator.userAgent;
+      pageUrlEl.value = location.href;
 
-      const payload = {
-        nombre: (fd.get("nombre") || "").toString().trim(),
-        whatsapp: normalizeWhatsApp(fd.get("whatsapp")),
-        email: (fd.get("email") || "").toString().trim(),
-        interes: (fd.get("interes") || "").toString().trim(),
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-      };
+      // Enviar el form al web app via iframe (sin CORS)
+      form.action = WEB_APP_URL;
+      form.method = "POST";
+      form.target = "hiddenFrame";
 
-      // Enviar como x-www-form-urlencoded para evitar CORS en GitHub Pages
-      const body = new URLSearchParams(payload).toString();
-
-      try {
-        await fetch(WEB_APP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-          },
-          body
-        });
-
-        // Con no-cors no podemos leer response, pero si llegó, normalmente se guardó.
-        msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
-        form.reset();
-
-      } catch (err) {
-        msg.innerHTML = '<div class="err">❌ No se pudo enviar. Revisa tu conexión o el link del formulario.</div>';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Quiero acceso";
-      }
+      form.submit();
     });
   </script>
 </body>
