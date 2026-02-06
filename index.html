@@ -65,119 +65,126 @@
             <option>Próximos eventos</option>
           </select>
 
-          <!-- Extras -->
-          <input type="hidden" name="rid" id="rid" />
-          <input type="hidden" name="timestamp" id="timestamp" />
-          <input type="hidden" name="userAgent" id="userAgent" />
-          <input type="hidden" name="pageUrl" id="pageUrl" />
-          <input type="hidden" name="source" value="landing" />
-
           <button id="btn" type="submit">Quiero acceso</button>
           <div id="msg"></div>
         </form>
-
-        <iframe id="hiddenFrame" name="hiddenFrame" style="display:none;"></iframe>
       </div>
     </div>
   </div>
 
   <script>
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
 
-  const form = document.getElementById("leadForm");
-  const btn = document.getElementById("btn");
-  const msg = document.getElementById("msg");
-  const whatsappInput = document.getElementById("whatsappInput");
+    const form = document.getElementById("leadForm");
+    const btn = document.getElementById("btn");
+    const msg = document.getElementById("msg");
+    const whatsappInput = document.getElementById("whatsappInput");
 
-  const ridEl = document.getElementById("rid");
-  const timestampEl = document.getElementById("timestamp");
-  const userAgentEl = document.getElementById("userAgent");
-  const pageUrlEl = document.getElementById("pageUrl");
-
-  const hiddenFrame = document.getElementById("hiddenFrame");
-
-  let pendingRid = "";
-  let fallbackTimer = null;
-
-  function normalizeWhatsApp(value) {
-    if (!value) return "";
-    let v = String(value).trim();
-    v = v.replace(/[^\d+]/g, "");
-    if (/^51\d{8,}$/.test(v)) v = "+" + v;
-    if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
-    return v;
-  }
-
-  function makeRid() {
-    return "rid_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-  }
-
-  function setIdle() {
-    btn.disabled = false;
-    btn.textContent = "Quiero acceso";
-    pendingRid = "";
-    if (fallbackTimer) clearTimeout(fallbackTimer);
-    fallbackTimer = null;
-  }
-
-  whatsappInput.addEventListener("blur", () => {
-    whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
-  });
-
-  // ✅ Listener robusto: acepta SOLO mensajes que vengan del iframe oculto
-  window.addEventListener("message", (event) => {
-    // Asegura que el mensaje venga del iframe que usamos para enviar
-    if (event.source !== hiddenFrame.contentWindow) return;
-
-    let data = event.data;
-
-    // por si alguna vez llega como string
-    if (typeof data === "string") {
-      try { data = JSON.parse(data); } catch (_) { return; }
+    function normalizeWhatsApp(value) {
+      if (!value) return "";
+      let v = String(value).trim();
+      v = v.replace(/[^\d+]/g, "");
+      if (/^51\d{8,}$/.test(v)) v = "+" + v;
+      if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
+      return v;
     }
-    if (!data || typeof data !== "object") return;
 
-    // valida el rid del envío actual
-    if (pendingRid && data.rid && data.rid !== pendingRid) return;
-
-    if (data.ok) {
-      msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
-      form.reset();
-    } else {
-      msg.innerHTML = `<div class="err">❌ No se pudo registrar. ${data.error ? ("Error: " + data.error) : ""}</div>`;
+    function makeRid() {
+      return "rid_" + Date.now() + "_" + Math.random().toString(16).slice(2);
     }
-    setIdle();
-  });
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    msg.innerHTML = "";
+    function jsonpCheck(rid, attempt, maxAttempts) {
+      return new Promise((resolve) => {
+        const cbName = "__rt_cb_" + rid.replace(/[^\w]/g, "") + "_" + attempt;
 
-    const botTrap = form.querySelector('input[name="bot_trap"]').value;
-    if (botTrap && botTrap.trim() !== "") return;
+        window[cbName] = (res) => {
+          cleanup();
+          resolve(res);
+        };
 
-    btn.disabled = true;
-    btn.textContent = "Enviando...";
+        function cleanup() {
+          try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+        }
 
-    whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
+        const script = document.createElement("script");
+        script.src =
+          WEB_APP_URL +
+          "?check=1" +
+          "&rid=" + encodeURIComponent(rid) +
+          "&callback=" + encodeURIComponent(cbName) +
+          "&t=" + Date.now();
 
-    pendingRid = makeRid();
-    ridEl.value = pendingRid;
-    timestampEl.value = new Date().toISOString();
-    userAgentEl.value = navigator.userAgent;
-    pageUrlEl.value = location.href;
+        script.onerror = () => {
+          cleanup();
+          resolve({ ok: false, rid, status: "error" });
+        };
 
-    // fallback SOLO si el navegador bloquea scripts del webapp (muy raro)
-    fallbackTimer = setTimeout(() => {
-      msg.innerHTML = '<div class="ok">✅ Registro enviado. (Si no ves confirmación, igual revisa el Sheet.)</div>';
-      setIdle();
-    }, 20000);
+        document.body.appendChild(script);
+      });
+    }
 
-    form.action = WEB_APP_URL;
-    form.method = "POST";
-    form.target = "hiddenFrame";
-    form.submit();
-  });
-</script>
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.innerHTML = "";
+
+      const botTrap = form.querySelector('input[name="bot_trap"]').value;
+      if (botTrap && botTrap.trim() !== "") return;
+
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+
+      whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
+
+      const fd = new FormData(form);
+      const rid = makeRid();
+
+      const payload = {
+        rid,
+        timestamp: new Date().toISOString(),
+        nombre: (fd.get("nombre") || "").toString().trim(),
+        whatsapp: (fd.get("whatsapp") || "").toString().trim(),
+        email: (fd.get("email") || "").toString().trim(),
+        interes: (fd.get("interes") || "").toString().trim(),
+        userAgent: navigator.userAgent,
+        pageUrl: location.href,
+        source: "landing",
+        bot_trap: "" // no enviar el honeypot real
+      };
+
+      try {
+        // POST (sin leer respuesta)
+        await fetch(WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: new URLSearchParams(payload).toString()
+        });
+
+        // Confirmación real vía JSONP check (hasta ~6s)
+        let confirmed = false;
+        const maxAttempts = 10;
+
+        for (let i = 1; i <= maxAttempts; i++) {
+          const res = await jsonpCheck(rid, i, maxAttempts);
+          if (res && res.ok) { confirmed = true; break; }
+          await new Promise(r => setTimeout(r, 550));
+        }
+
+        if (confirmed) {
+          msg.innerHTML = '<div class="ok">✅ ¡Listo! Te registraste correctamente.</div>';
+          form.reset();
+        } else {
+          msg.innerHTML = '<div class="ok">✅ Registro enviado. (Confirmación en proceso: revisa el Sheet si no aparece en unos segundos.)</div>';
+        }
+
+      } catch (err) {
+        msg.innerHTML = '<div class="err">❌ No se pudo enviar. Revisa tu conexión.</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Quiero acceso";
+      }
+    });
+  </script>
 </body>
 </html>
