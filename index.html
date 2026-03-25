@@ -25,33 +25,27 @@
     .flyer-wrap{margin:14px 0 0;border-radius:12px;overflow:hidden;border:1px solid #2a2a40}
     .flyer-wrap img{width:100%;display:block;border-radius:12px}
     .flyer-placeholder{background:#1a1a2e;border:2px dashed #2a2a40;border-radius:12px;padding:40px 20px;text-align:center;opacity:.5;font-size:13px;margin-top:14px}
-    select option[value=""]{color:#888}
+    .beneficio-badge{background:#1a2e1a;border:1px solid #2a402a;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;color:#7CFFB2;display:none}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="badge">ROUND TRIP &bull; Lista de Invitados</div>
+  <div class="badge">ROUND TRIP • Lista de Invitados</div>
 
-  <!-- ==========================================
-       EDITA AQUI POR CADA EVENTO
-       ========================================== -->
   <script>
-    const EVENTO = {
-      nombre: "Round Trip &bull; Noche de Estreno",
-      fecha: "Sábado 14 de Marzo, 2026",
-      lugar: "Lima, Perú",
-      // Pega la URL directa de la imagen del flyer (Google Drive, Imgur, etc.)
-      // Deja en "" si no tienes flyer todavía
-      flyerUrl: ""
-    };
+  const EVENTO = {
+    nombre:  "Round Trip \u2022 Noche de Estreno",
+    fecha:   "S\u00e1bado 14 de Marzo, 2026",
+    lugar:   "Lima, Per\u00fa",
+    flyerUrl: ""
+  };
   </script>
-  <!-- ========================================== -->
 
   <div class="grid">
     <div class="card">
       <div id="evento-info"></div>
       <h1>Anota tu nombre</h1>
-      <p>Regístrate con tu promotor para entrar a la lista. Recibirás confirmación por WhatsApp.</p>
+      <p>Reg\u00edstrate con tu promotor para entrar a la lista. Recibir\u00e1s confirmaci\u00f3n por WhatsApp.</p>
       <p class="small">* No spam. Puedes salirte cuando quieras.</p>
       <div id="flyer-area"></div>
     </div>
@@ -65,20 +59,25 @@
 
         <p class="small">Nombre</p>
         <input name="nombre" required placeholder="Tu nombre completo" />
-        <div style="height:10px"></div>
 
+        <div style="height:10px"></div>
         <p class="small">WhatsApp</p>
         <input name="whatsapp" id="whatsappInput" required placeholder="+51 999 999 999" inputmode="tel" />
-        <div style="height:10px"></div>
 
-        <p class="small">Correo</p>
-        <input name="email" type="email" required placeholder="tucorreo@gmail.com" />
         <div style="height:10px"></div>
+        <p class="small">Correo (opcional)</p>
+        <input name="email" type="email" placeholder="tucorreo@gmail.com" />
 
-        <p class="small">¿Con qué promotor vas?</p>
+        <div style="height:10px"></div>
+        <p class="small">\u00bfCon qu\u00e9 promotor vas?</p>
         <select name="promotor" id="promotorSelect" required>
           <option value="">Cargando promotores...</option>
         </select>
+
+        <div style="height:10px"></div>
+        <p class="small">C\u00f3digo de promotor (opcional)</p>
+        <input name="codigo_promotor" id="codigoInput" placeholder="Ejemplo: RTDIEGO" />
+        <div id="beneficioBadge" class="beneficio-badge"></div>
 
         <button id="btn" type="submit">Quiero entrar a la lista</button>
         <div id="msg"></div>
@@ -88,66 +87,108 @@
 </div>
 
 <script>
-  // ---- Config ----
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlN4locflFqnLoK_FSx0k5JDtp0Y7jYahEGy30s0t5w5lopCqYAa2l5VeWb_X1VsXqTw/exec";
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcxe12bsUnnBGNVkwE5kefp10kPBRRN5rELZIBLIJWa0v2Q0lFvPdjw_yU0ez5UkxvzA/exec";
   const SHEET_ID    = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
 
-  // ---- Render evento info ----
+  const params      = new URLSearchParams(window.location.search);
+  const PROMOTOR_URL = params.get("promotor") || "";
+  const CODIGO_URL   = params.get("codigo")   || "";
+
   document.getElementById("evento-info").innerHTML =
     '<p class="evento-nombre">' + EVENTO.nombre + '</p>' +
-    '<p class="evento-fecha">' + EVENTO.fecha + ' &mdash; ' + EVENTO.lugar + '</p>';
+    '<p class="evento-fecha">'  + EVENTO.fecha  + ' — ' + EVENTO.lugar + '</p>';
 
-  // ---- Render flyer ----
   const flyerArea = document.getElementById("flyer-area");
   if (EVENTO.flyerUrl && EVENTO.flyerUrl.trim() !== "") {
-    flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer del evento" /></div>';
+    flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer" /></div>';
   } else {
     flyerArea.innerHTML = '<div class="flyer-placeholder">🎬 Flyer del evento próximamente</div>';
   }
 
-  // ---- Cargar promotores desde Sheets (JSON público) ----
   const promotorSelect = document.getElementById("promotorSelect");
+  const codigoInput    = document.getElementById("codigoInput");
+  const beneficioBadge = document.getElementById("beneficioBadge");
+  let catalogoPromotores = [];
+
   function loadPromotores() {
     const url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
-      "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:A100";
+      "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200";
+
     fetch(url)
-      .then(r => r.text())
-      .then(txt => {
+      .then(function(r) { return r.text(); })
+      .then(function(txt) {
         const json = JSON.parse(txt.replace(/^[^\{]+/, "").replace(/[^\}]+$/, ""));
-        const rows = json.table.rows;
+        const rows = json.table.rows || [];
         promotorSelect.innerHTML = '<option value="">Elige tu promotor</option>';
+        catalogoPromotores = [];
+
         rows.forEach(function(row) {
-          if (row.c && row.c[0] && row.c[0].v) {
-            const opt = document.createElement("option");
-            opt.value = row.c[0].v;
-            opt.textContent = row.c[0].v;
-            promotorSelect.appendChild(opt);
-          }
+          const nombre  = row.c && row.c[0] && row.c[0].v ? String(row.c[0].v) : "";
+          const codigo  = row.c && row.c[1] && row.c[1].v ? String(row.c[1].v) : "";
+          const beneficio = row.c && row.c[2] && row.c[2].v ? String(row.c[2].v) : "";
+          const activo  = row.c && row.c[3] && row.c[3].v ? String(row.c[3].v) : "";
+
+          if (!nombre || activo.toUpperCase() !== "SI") return;
+
+          catalogoPromotores.push({ nombre: nombre, codigo: codigo, beneficio: beneficio });
+
+          const opt = document.createElement("option");
+          opt.value = nombre;
+          opt.textContent = nombre;
+          opt.dataset.codigo = codigo;
+          opt.dataset.beneficio = beneficio;
+          promotorSelect.appendChild(opt);
         });
+
+        if (PROMOTOR_URL) promotorSelect.value = PROMOTOR_URL;
+        if (CODIGO_URL)   codigoInput.value    = CODIGO_URL;
+        mostrarBeneficio();
       })
       .catch(function() {
-        promotorSelect.innerHTML = '<option value="">No se pudo cargar &mdash; escribe tu promotor</option>';
-        // fallback: convertir en texto libre
-        const input = document.createElement("input");
-        input.name = "promotor";
-        input.required = true;
-        input.placeholder = "Nombre de tu promotor";
-        promotorSelect.parentNode.replaceChild(input, promotorSelect);
+        promotorSelect.innerHTML = '<option value="">No se pudo cargar</option>';
+        const inp = document.createElement("input");
+        inp.name = "promotor"; inp.required = true;
+        inp.placeholder = "Nombre de tu promotor";
+        promotorSelect.parentNode.replaceChild(inp, promotorSelect);
       });
   }
+
+  function mostrarBeneficio() {
+    const codVal = codigoInput.value.trim().toUpperCase();
+    const selVal = promotorSelect.value;
+    let beneficio = "";
+
+    if (codVal) {
+      catalogoPromotores.forEach(function(p) {
+        if (p.codigo && p.codigo.toUpperCase() === codVal) beneficio = p.beneficio;
+      });
+    }
+    if (!beneficio && selVal) {
+      const opt = promotorSelect.querySelector('option[value="' + selVal + '"]');
+      if (opt && opt.dataset.beneficio) beneficio = opt.dataset.beneficio;
+    }
+
+    if (beneficio) {
+      beneficioBadge.textContent = "🎁 Beneficio: " + beneficio;
+      beneficioBadge.style.display = "block";
+    } else {
+      beneficioBadge.style.display = "none";
+    }
+  }
+
+  promotorSelect.addEventListener("change", mostrarBeneficio);
+  codigoInput.addEventListener("input", mostrarBeneficio);
   loadPromotores();
 
-  // ---- Helpers ----
-  const form = document.getElementById("leadForm");
-  const btn  = document.getElementById("btn");
-  const msg  = document.getElementById("msg");
+  const form         = document.getElementById("leadForm");
+  const btn          = document.getElementById("btn");
+  const msg          = document.getElementById("msg");
   const whatsappInput = document.getElementById("whatsappInput");
 
-  function normalizeWhatsApp(value) {
+  function normalizeWA(value) {
     if (!value) return "";
-    let v = String(value).trim();
-    v = v.replace(/[^\d+]/g, "");
-    if (/^51\d{8,}$/.test(v)) v = "+" + v;
+    let v = String(value).trim().replace(/[^\d+]/g, "");
+    if (/^51\d{9}$/.test(v)) v = "+" + v;
     if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
     return v;
   }
@@ -156,65 +197,72 @@
     return new Promise(function(resolve) {
       const cbName = "__rt_cb_" + Date.now() + "_" + Math.random().toString(16).slice(2);
       window[cbName] = function(res) { cleanup(); resolve(res); };
+
       function cleanup() {
         try { delete window[cbName]; } catch(_) { window[cbName] = undefined; }
         if (script && script.parentNode) script.parentNode.removeChild(script);
       }
+
       const qs = new URLSearchParams({
-        submit: "1",
-        callback: cbName,
-        timestamp: payload.timestamp,
-        nombre:    payload.nombre,
-        whatsapp:  payload.whatsapp,
-        email:     payload.email,
-        promotor:  payload.promotor,
-        evento:    payload.evento,
-        userAgent: payload.userAgent,
-        pageUrl:   payload.pageUrl,
-        source:    payload.source
+        submit:          "1",
+        callback:         cbName,
+        timestamp:        payload.timestamp,
+        nombre:           payload.nombre,
+        whatsapp:         payload.whatsapp,
+        email:            payload.email,
+        promotor:         payload.promotor,
+        codigo_promotor:  payload.codigo_promotor,
+        evento:           payload.evento,
+        userAgent:        payload.userAgent,
+        pageUrl:          payload.pageUrl,
+        source:           payload.source
       }).toString();
+
       const script = document.createElement("script");
-      script.src = WEB_APP_URL + "?" + qs;
+      script.src   = WEB_APP_URL + "?" + qs;
       script.onerror = function() { cleanup(); resolve({ ok: false, status: "network_error" }); };
       document.body.appendChild(script);
     });
   }
 
-  // ---- Submit ----
   form.addEventListener("submit", async function(e) {
     e.preventDefault();
     msg.innerHTML = "";
     const botTrapEl = form.querySelector('input[name="bot_trap"]');
     if (botTrapEl && botTrapEl.value.trim() !== "") return;
+
     btn.disabled = true;
     btn.textContent = "Anotando...";
-    whatsappInput.value = normalizeWhatsApp(whatsappInput.value);
+    whatsappInput.value = normalizeWA(whatsappInput.value);
+
     const fd = new FormData(form);
     const payload = {
-      timestamp: new Date().toISOString(),
-      nombre:    (fd.get("nombre")   || "").toString().trim(),
-      whatsapp:  (fd.get("whatsapp") || "").toString().trim(),
-      email:     (fd.get("email")    || "").toString().trim(),
-      promotor:  (fd.get("promotor") || "").toString().trim(),
-      evento:    EVENTO.nombre.replace(/&bull;/g, "\u2022"),
-      userAgent: navigator.userAgent,
-      pageUrl:   location.href,
-      source:    "landing"
+      timestamp:       new Date().toISOString(),
+      nombre:          (fd.get("nombre")          || "").toString().trim(),
+      whatsapp:        (fd.get("whatsapp")         || "").toString().trim(),
+      email:           (fd.get("email")            || "").toString().trim(),
+      promotor:        (fd.get("promotor")         || "").toString().trim() || PROMOTOR_URL,
+      codigo_promotor: (fd.get("codigo_promotor")  || "").toString().trim() || CODIGO_URL,
+      evento:          EVENTO.nombre.replace(/\u2022/g, "\u2022"),
+      userAgent:       navigator.userAgent,
+      pageUrl:         location.href,
+      source:          "landing"
     };
-    const resultPromise = jsonpSubmit(payload);
-    setTimeout(async function() {
-      const res = await resultPromise;
-      if (res && res.ok && res.status === "duplicate") {
-        msg.innerHTML = '<div class="ok">✅ Ya estabas en la lista. Te confirmamos pronto.</div>';
-      } else if (res && res.ok) {
-        msg.innerHTML = '<div class="ok">✅ ¡Listo! Estás en la lista. Te escribimos pronto.</div>';
-      } else {
-        msg.innerHTML = '<div class="err">❌ No se pudo enviar. Reintenta.</div>';
-      }
-      btn.disabled = false;
-      btn.textContent = "Quiero entrar a la lista";
-      if (res && res.ok) form.reset();
-    }, 2500);
+
+    const res = await jsonpSubmit(payload);
+
+    if (res && res.ok && res.status === "duplicate") {
+      msg.innerHTML = '<div class="ok">✅ Ya estabas en la lista. Te confirmamos pronto por WhatsApp.</div>';
+    } else if (res && res.ok) {
+      const extra = res.beneficio ? ' Beneficio: ' + res.beneficio + '.' : '';
+      msg.innerHTML = '<div class="ok">✅ ¡Listo! Estás en la lista.' + extra + ' Te escribiremos pronto.</div>';
+    } else {
+      msg.innerHTML = '<div class="err">❌ No se pudo enviar. Reintenta.</div>';
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Quiero entrar a la lista";
+    if (res && res.ok) form.reset();
   });
 </script>
 </body>
