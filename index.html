@@ -103,59 +103,60 @@ if (EVENTO.flyerUrl && EVENTO.flyerUrl.trim() !== "") {
 const promotorSelect = document.getElementById("promotorSelect");
 
 function loadPromotores() {
-  const url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
-              "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200";
+  var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+            "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200";
   fetch(url)
-    .then(function(r) { return r.text(); })
-    .then(function(txt) {
-      const json = JSON.parse(txt.replace(/^[^\{]+/, "").replace(/[^\}]+$/, ""));
-      const rows = json.table.rows || [];
+    .then(function(r){ return r.text(); })
+    .then(function(txt){
+      var json = JSON.parse(txt.replace(/^[^\{]+/,"").replace(/[^\}]+$/,""));
+      var rows = json.table.rows || [];
       promotorSelect.innerHTML = '<option value="">Elige tu promotor</option>';
-      rows.forEach(function(row) {
-        const nombre = row.c && row.c[0] && row.c[0].v ? String(row.c[0].v) : "";
-        const activo = row.c && row.c[3] && row.c[3].v ? String(row.c[3].v) : "";
+      rows.forEach(function(row){
+        var nombre = row.c&&row.c[0]&&row.c[0].v ? String(row.c[0].v) : "";
+        var activo = row.c&&row.c[3]&&row.c[3].v ? String(row.c[3].v) : "";
         if (!nombre || activo.toUpperCase() !== "SI") return;
-        const opt = document.createElement("option");
-        opt.value = nombre;
-        opt.textContent = nombre;
+        var opt = document.createElement("option");
+        opt.value = nombre; opt.textContent = nombre;
         promotorSelect.appendChild(opt);
       });
       if (PROMOTOR_URL) promotorSelect.value = PROMOTOR_URL;
     })
-    .catch(function() {
-      promotorSelect.innerHTML = '<option value="">Error al cargar</option>';
-    });
+    .catch(function(){ promotorSelect.innerHTML = '<option value="">Error al cargar</option>'; });
 }
-
 loadPromotores();
 
-const form = document.getElementById("leadForm");
-const btn  = document.getElementById("btn");
-const msg  = document.getElementById("msg");
-const whatsappInput = document.getElementById("whatsappInput");
+var form = document.getElementById("leadForm");
+var btn  = document.getElementById("btn");
+var msg  = document.getElementById("msg");
+var wai  = document.getElementById("whatsappInput");
 
 function normalizeWA(v) {
   if (!v) return "";
-  v = String(v).trim().replace(/[^\d+]/g, "");
+  v = String(v).trim().replace(/[^\d+]/g,"");
   if (/^51\d{9}$/.test(v)) v = "+" + v;
   if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
   return v;
 }
 
-function jsonpSubmit(payload) {
+function submitForm(payload) {
   return new Promise(function(resolve) {
-    const cb = "__rt_" + Date.now();
+    var cb = "__rt_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    var timer = setTimeout(function(){
+      window[cb] = function(){};
+      resolve({ ok: false, status: "timeout" });
+    }, 15000);
     window[cb] = function(res) {
-      delete window[cb];
+      clearTimeout(timer);
+      try { delete window[cb]; } catch(e){}
       if (sc && sc.parentNode) sc.parentNode.removeChild(sc);
       resolve(res);
     };
-    const qs = new URLSearchParams({
+    var qs = new URLSearchParams({
       submit: "1", callback: cb,
       timestamp: payload.timestamp,
       nombre: payload.nombre,
       whatsapp: payload.whatsapp,
-      email: payload.email,
+      email: payload.email || "",
       promotor: payload.promotor,
       evento: payload.evento,
       source: "landing"
@@ -163,41 +164,43 @@ function jsonpSubmit(payload) {
     var sc = document.createElement("script");
     sc.src = WEB_APP_URL + "?" + qs;
     sc.onerror = function() {
-      delete window[cb];
+      clearTimeout(timer);
+      try { delete window[cb]; } catch(e){}
       resolve({ ok: false, status: "network_error" });
     };
     document.body.appendChild(sc);
   });
 }
 
-form.addEventListener("submit", async function(e) {
+form.addEventListener("submit", function(e) {
   e.preventDefault();
   msg.innerHTML = "";
-  const trap = form.querySelector('input[name="bot_trap"]');
+  var trap = form.querySelector('input[name="bot_trap"]');
   if (trap && trap.value.trim()) return;
   btn.disabled = true;
   btn.textContent = "Anotando...";
-  whatsappInput.value = normalizeWA(whatsappInput.value);
-  const fd = new FormData(form);
-  const payload = {
+  wai.value = normalizeWA(wai.value);
+  var fd = new FormData(form);
+  var payload = {
     timestamp: new Date().toISOString(),
-    nombre:   (fd.get("nombre")   || "").toString().trim(),
-    whatsapp: (fd.get("whatsapp") || "").toString().trim(),
-    email:    (fd.get("email")    || "").toString().trim(),
-    promotor: (fd.get("promotor") || "").toString().trim() || PROMOTOR_URL,
+    nombre:   (fd.get("nombre")   ||"").toString().trim(),
+    whatsapp: (fd.get("whatsapp") ||"").toString().trim(),
+    email:    (fd.get("email")    ||"").toString().trim(),
+    promotor: (fd.get("promotor") ||"").toString().trim() || PROMOTOR_URL,
     evento:   EVENTO.nombre
   };
-  const res = await jsonpSubmit(payload);
-  if (res && res.ok && res.status === "duplicate") {
-    msg.innerHTML = '<div class="ok">✅ Ya estabas en la lista. Te confirmamos pronto por WhatsApp.</div>';
-  } else if (res && res.ok) {
-    msg.innerHTML = '<div class="ok">✅ ¡Listo! Estás en la lista. Te escribiremos pronto.</div>';
-  } else {
-    msg.innerHTML = '<div class="err">❌ No se pudo enviar. Reintenta.</div>';
-  }
-  btn.disabled = false;
-  btn.textContent = "Quiero entrar a la lista";
-  if (res && res.ok) form.reset();
+  submitForm(payload).then(function(res) {
+    if (res && res.ok && res.status === "duplicate") {
+      msg.innerHTML = '<div class="ok">✅ Ya estabas en la lista. Te confirmamos pronto por WhatsApp.</div>';
+    } else if (res && res.ok) {
+      msg.innerHTML = '<div class="ok">✅ ¡Listo! Estás en la lista. Te escribiremos pronto.</div>';
+    } else {
+      msg.innerHTML = '<div class="err">❌ No se pudo enviar. Reintenta.</div>';
+    }
+    btn.disabled = false;
+    btn.textContent = "Quiero entrar a la lista";
+    if (res && res.ok) form.reset();
+  });
 });
 </script>
 </body>
