@@ -38,6 +38,8 @@
     lugar:    "Lima, Peru",
     flyerUrl: "https://i.postimg.cc/4NcYndF5/Sin-ti-tulo-2-jpg.jpg"
   };
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoSIT_YBwtRqPQwONaayUY-HWNStpjy5F5UvApthYFaMPsc3OPRi_5A8Gn00gpZJdJ/exec";
+  const SHEET_ID = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
   </script>
   <div class="grid">
     <div class="card">
@@ -54,7 +56,7 @@
           <input type="text" name="bot_trap" tabindex="-1" autocomplete="off" />
         </label>
         <label>Nombre
-          <input name="nombre" required placeholder="Tu nombre completo" />
+          <input name="nombre" id="nombre" required placeholder="Tu nombre completo" />
         </label>
         <label>WhatsApp
           <input name="whatsapp" id="whatsappInput" required placeholder="+51 999 999 999" inputmode="tel" />
@@ -74,23 +76,20 @@
   </div>
 </div>
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoSIT_YBwtRqPQwONaayUY-HWNStpjy5F5UvApthYFaMPsc3OPRi_5A8Gn00gpZJdJ/exec";
-const SHEET_ID = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
-const params = new URLSearchParams(window.location.search);
-const PROMOTOR_URL = params.get("promotor") || "";
+var params = new URLSearchParams(window.location.search);
+var PROMOTOR_URL = params.get("promotor") || "";
 document.getElementById("evento-info").innerHTML =
   '<p class="evento-nombre">' + EVENTO.nombre + '</p>' +
   '<p class="evento-fecha">' + EVENTO.fecha + ' - ' + EVENTO.lugar + '</p>';
 var flyerArea = document.getElementById("flyer-area");
 if (EVENTO.flyerUrl) {
-  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer del evento" /></div>';
+  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer" /></div>';
 } else {
-  flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer del evento proximamente</div>';
+  flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer proximamente</div>';
 }
 var promotorSelect = document.getElementById("promotorSelect");
 function loadPromotores() {
-  var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200";
-  fetch(url)
+  fetch("https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200")
     .then(function(r){ return r.text(); })
     .then(function(txt){
       var json = JSON.parse(txt.replace(/^[^\{]+/,"").replace(/[^\}]+$/,""));
@@ -101,15 +100,12 @@ function loadPromotores() {
         var activo = row.c&&row.c[3]&&row.c[3].v ? String(row.c[3].v) : "";
         if (!nombre || activo.toUpperCase() !== "SI") return;
         var opt = document.createElement("option");
-        opt.value = nombre;
-        opt.textContent = nombre;
+        opt.value = nombre; opt.textContent = nombre;
         promotorSelect.appendChild(opt);
       });
       if (PROMOTOR_URL) promotorSelect.value = PROMOTOR_URL;
     })
-    .catch(function(){
-      promotorSelect.innerHTML = '<option value="">Error al cargar</option>';
-    });
+    .catch(function(){ promotorSelect.innerHTML = '<option value="">Error al cargar</option>'; });
 }
 loadPromotores();
 var form = document.getElementById("leadForm");
@@ -123,6 +119,34 @@ function normalizeWA(v) {
   if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
   return v;
 }
+function sendData(payload, attempt) {
+  attempt = attempt || 1;
+  var qs = new URLSearchParams({
+    submit:"1",
+    nombre: payload.nombre,
+    whatsapp: payload.whatsapp,
+    email: payload.email,
+    promotor: payload.promotor,
+    evento: payload.evento,
+    timestamp: payload.timestamp,
+    source: "landing"
+  }).toString();
+  var url = WEB_APP_URL + "?" + qs;
+  var img = new Image();
+  img.onload = img.onerror = function() {
+    msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
+    btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
+    form.reset(); loadPromotores();
+  };
+  img.src = url;
+  setTimeout(function() {
+    if (btn.disabled) {
+      msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
+      btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
+      form.reset(); loadPromotores();
+    }
+  }, 8000);
+}
 form.addEventListener("submit", function(e) {
   e.preventDefault();
   msg.innerHTML = "";
@@ -131,26 +155,14 @@ form.addEventListener("submit", function(e) {
   btn.disabled = true; btn.textContent = "Anotando...";
   wai.value = normalizeWA(wai.value);
   var fd = new FormData(form);
-  var nombre   = (fd.get("nombre")   ||"").toString().trim();
-  var whatsapp = (fd.get("whatsapp") ||"").toString().trim();
-  var email    = (fd.get("email")    ||"").toString().trim();
-  var promotor = (fd.get("promotor") ||"").toString().trim() || PROMOTOR_URL;
-  var qs = new URLSearchParams({
-    submit:"1", nombre:nombre, whatsapp:whatsapp,
-    email:email, promotor:promotor, evento:EVENTO.nombre,
-    timestamp:new Date().toISOString(), source:"landing"
-  }).toString();
-  fetch(WEB_APP_URL + "?" + qs, { method:"GET", mode:"no-cors" })
-    .then(function(){
-      msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
-      btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
-      form.reset();
-      loadPromotores();
-    })
-    .catch(function(){
-      msg.innerHTML = '<div class="err">No se pudo enviar. Reintenta.</div>';
-      btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
-    });
+  sendData({
+    nombre:   (fd.get("nombre")   ||"").toString().trim(),
+    whatsapp: (fd.get("whatsapp") ||"").toString().trim(),
+    email:    (fd.get("email")    ||"").toString().trim(),
+    promotor: (fd.get("promotor") ||"").toString().trim() || PROMOTOR_URL,
+    evento:   EVENTO.nombre,
+    timestamp: new Date().toISOString()
+  });
 });
 </script>
 </body>
