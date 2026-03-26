@@ -13,6 +13,7 @@
     h1{font-size:38px;margin:0 0 10px}
     p{opacity:.9;line-height:1.4;margin:0 0 10px}
     input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid #2a2a40;background:#0f0f18;color:#fff;box-sizing:border-box}
+    label{display:block;margin-bottom:12px;font-size:14px;opacity:.8}
     button{background:#7c3aed;border:0;font-weight:700;cursor:pointer;margin-top:14px}
     button:disabled{opacity:.6;cursor:not-allowed}
     .small{font-size:12px;opacity:.75;margin:0 0 6px}
@@ -82,10 +83,10 @@
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcxe12bsUnnBGNVkwE5kefp10kPBRRN5rELZIBLIJWa0v2Q0lFvPdjw_yU0ez5UkxvzA/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx803pZ7YJEUpKGldux77q9z4suBxj2Bfd-nGn1_DvLdKeP9OlgVLvqyv43qniM0gW2/exec";
 const SHEET_ID   = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
 
-const params      = new URLSearchParams(window.location.search);
+const params       = new URLSearchParams(window.location.search);
 const PROMOTOR_URL = params.get("promotor") || "";
 
 document.getElementById("evento-info").innerHTML =
@@ -111,8 +112,8 @@ function loadPromotores() {
       const rows = json.table.rows || [];
       promotorSelect.innerHTML = '<option value="">Elige tu promotor</option>';
       rows.forEach(function(row) {
-        const nombre  = row.c && row.c[0] && row.c[0].v ? String(row.c[0].v) : "";
-        const activo  = row.c && row.c[3] && row.c[3].v ? String(row.c[3].v) : "";
+        const nombre = row.c && row.c[0] && row.c[0].v ? String(row.c[0].v) : "";
+        const activo = row.c && row.c[3] && row.c[3].v ? String(row.c[3].v) : "";
         if (!nombre || activo.toUpperCase() !== "SI") return;
         const opt = document.createElement("option");
         opt.value = nombre;
@@ -120,15 +121,9 @@ function loadPromotores() {
         promotorSelect.appendChild(opt);
       });
       if (PROMOTOR_URL) promotorSelect.value = PROMOTOR_URL;
-      if (promotorSelect.options.length > 1) {
-        promotorSelect.appendChild(Object.assign(document.createElement('option'), {value:'NOMBRE DEL PROMOTOR', textContent:'NOMBRE DEL PROMOTOR'}));
-      }
     })
     .catch(function() {
-      promotorSelect.innerHTML = '<option value="">No se pudo cargar</option>';
-      const inp = document.createElement("input");
-      inp.name = "promotor"; inp.required = true; inp.placeholder = "Nombre de tu promotor";
-      promotorSelect.parentNode.replaceChild(inp, promotorSelect);
+      promotorSelect.innerHTML = '<option value="">Error al cargar</option>';
     });
 }
 
@@ -139,9 +134,9 @@ const btn  = document.getElementById("btn");
 const msg  = document.getElementById("msg");
 const whatsappInput = document.getElementById("whatsappInput");
 
-function normalizeWA(value) {
-  if (!value) return "";
-  let v = String(value).trim().replace(/[^\d+]/g, "");
+function normalizeWA(v) {
+  if (!v) return "";
+  v = String(v).trim().replace(/[^\d+]/g, "");
   if (/^51\d{9}$/.test(v)) v = "+" + v;
   if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
   return v;
@@ -149,46 +144,48 @@ function normalizeWA(value) {
 
 function jsonpSubmit(payload) {
   return new Promise(function(resolve) {
-    const cbName = "__rt_cb_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-    window[cbName] = function(res) { cleanup(); resolve(res); };
-    function cleanup() {
-      try { delete window[cbName]; } catch(_) { window[cbName] = undefined; }
-      if (script && script.parentNode) script.parentNode.removeChild(script);
-    }
+    const cb = "__rt_" + Date.now();
+    window[cb] = function(res) {
+      delete window[cb];
+      if (sc && sc.parentNode) sc.parentNode.removeChild(sc);
+      resolve(res);
+    };
     const qs = new URLSearchParams({
-      submit: "1", callback: cbName,
-      timestamp: payload.timestamp, nombre: payload.nombre,
-      whatsapp: payload.whatsapp, email: payload.email,
-      promotor: payload.promotor, codigo_promotor: "",
-      evento: payload.evento, userAgent: payload.userAgent,
-      pageUrl: payload.pageUrl, source: payload.source
+      submit: "1", callback: cb,
+      timestamp: payload.timestamp,
+      nombre: payload.nombre,
+      whatsapp: payload.whatsapp,
+      email: payload.email,
+      promotor: payload.promotor,
+      evento: payload.evento,
+      source: "landing"
     }).toString();
-    const script = document.createElement("script");
-    script.src = WEB_APP_URL + "?" + qs;
-    script.onerror = function() { cleanup(); resolve({ ok: false, status: "network_error" }); };
-    document.body.appendChild(script);
+    var sc = document.createElement("script");
+    sc.src = WEB_APP_URL + "?" + qs;
+    sc.onerror = function() {
+      delete window[cb];
+      resolve({ ok: false, status: "network_error" });
+    };
+    document.body.appendChild(sc);
   });
 }
 
 form.addEventListener("submit", async function(e) {
   e.preventDefault();
   msg.innerHTML = "";
-  const botTrapEl = form.querySelector('input[name="bot_trap"]');
-  if (botTrapEl && botTrapEl.value.trim() !== "") return;
+  const trap = form.querySelector('input[name="bot_trap"]');
+  if (trap && trap.value.trim()) return;
   btn.disabled = true;
   btn.textContent = "Anotando...";
   whatsappInput.value = normalizeWA(whatsappInput.value);
   const fd = new FormData(form);
   const payload = {
     timestamp: new Date().toISOString(),
-    nombre:    (fd.get("nombre")  || "").toString().trim(),
-    whatsapp:  (fd.get("whatsapp") || "").toString().trim(),
-    email:     (fd.get("email")   || "").toString().trim(),
-    promotor:  (fd.get("promotor") || "").toString().trim() || PROMOTOR_URL,
-    evento:    EVENTO.nombre,
-    userAgent: navigator.userAgent,
-    pageUrl:   location.href,
-    source:    "landing"
+    nombre:   (fd.get("nombre")   || "").toString().trim(),
+    whatsapp: (fd.get("whatsapp") || "").toString().trim(),
+    email:    (fd.get("email")    || "").toString().trim(),
+    promotor: (fd.get("promotor") || "").toString().trim() || PROMOTOR_URL,
+    evento:   EVENTO.nombre
   };
   const res = await jsonpSubmit(payload);
   if (res && res.ok && res.status === "duplicate") {
