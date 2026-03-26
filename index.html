@@ -36,7 +36,7 @@
     nombre:   "Round Trip - Noche de Estreno",
     fecha:    "Sabado 14 de Marzo, 2026",
     lugar:    "Lima, Peru",
-    flyerUrl: "https://lh3.googleusercontent.com/d/1mf_MFlc2dvF2fnNj9OryYMBwrV-Vn9XV=w800"
+    flyerUrl: "https://drive.usercontent.google.com/download?id=1mf_MFlc2dvF2fnNj9OryYMBwrV-Vn9XV&export=view&authuser=0"
   };
   </script>
   <div class="grid">
@@ -83,7 +83,7 @@ document.getElementById("evento-info").innerHTML =
   '<p class="evento-fecha">' + EVENTO.fecha + ' - ' + EVENTO.lugar + '</p>';
 var flyerArea = document.getElementById("flyer-area");
 if (EVENTO.flyerUrl) {
-  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer del evento" referrerpolicy="no-referrer" /></div>';
+  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer del evento" /></div>';
 } else {
   flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer del evento proximamente</div>';
 }
