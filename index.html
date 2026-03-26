@@ -31,25 +31,22 @@
 <body>
 <div class="wrap">
   <div class="badge">ROUND TRIP &bull; Lista de Invitados</div>
-
   <script>
   const EVENTO = {
-    nombre:   "Round Trip &bull; Noche de Estreno",
-    fecha:    "S&aacute;bado 14 de Marzo, 2026",
-    lugar:    "Lima, Per&uacute;",
+    nombre:   "Round Trip - Noche de Estreno",
+    fecha:    "Sabado 14 de Marzo, 2026",
+    lugar:    "Lima, Peru",
     flyerUrl: "https://drive.google.com/uc?export=view&id=1mf_MFlc2dvF2fnNj9OryYMBwrV-Vn9XV"
   };
   </script>
-
   <div class="grid">
     <div class="card">
       <div id="evento-info"></div>
       <h1>Anota tu nombre</h1>
-      <p>Reg&iacute;strate con tu promotor para entrar a la lista. Recibir&aacute;s confirmaci&oacute;n por WhatsApp.</p>
+      <p>Registrate con tu promotor para entrar a la lista. Recibiras confirmacion por WhatsApp.</p>
       <p class="small">* No spam. Puedes salirte cuando quieras.</p>
       <div id="flyer-area"></div>
     </div>
-
     <div class="card">
       <form id="leadForm" autocomplete="on">
         <label class="honeypot">
@@ -65,7 +62,7 @@
         <label>Correo (opcional)
           <input name="email" type="email" placeholder="tucorreo@gmail.com" />
         </label>
-        <label>&iquest;Con qu&eacute; promotor vas?
+        <label>Con que promotor vas?
           <select name="promotor" id="promotorSelect" required>
             <option value="">Cargando promotores...</option>
           </select>
@@ -76,24 +73,20 @@
     </div>
   </div>
 </div>
-
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcxe12bsUnnBGNVkwE5kefp10kPBRRN5rELZIBLIJWa0v2Q0lFvPdjw_yU0ez5UkxvzA/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoSIT_YBwtRqPQwONaayUY-HWNStpjy5F5UvApthYFaMPsc3OPRi_5A8Gn00gpZJdJ/exec";
 const SHEET_ID = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
 const params = new URLSearchParams(window.location.search);
 const PROMOTOR_URL = params.get("promotor") || "";
-
 document.getElementById("evento-info").innerHTML =
   '<p class="evento-nombre">' + EVENTO.nombre + '</p>' +
-  '<p class="evento-fecha">' + EVENTO.fecha + ' &mdash; ' + EVENTO.lugar + '</p>';
-
+  '<p class="evento-fecha">' + EVENTO.fecha + ' - ' + EVENTO.lugar + '</p>';
 const flyerArea = document.getElementById("flyer-area");
 if (EVENTO.flyerUrl && EVENTO.flyerUrl.trim() !== "") {
   flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer" /></div>';
 } else {
-  flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer del evento pr&oacute;ximamente</div>';
+  flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer del evento proximamente</div>';
 }
-
 const promotorSelect = document.getElementById("promotorSelect");
 function loadPromotores() {
   var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200";
@@ -119,12 +112,10 @@ function loadPromotores() {
     });
 }
 loadPromotores();
-
 var form = document.getElementById("leadForm");
 var btn  = document.getElementById("btn");
 var msg  = document.getElementById("msg");
 var wai  = document.getElementById("whatsappInput");
-
 function normalizeWA(v) {
   if (!v) return "";
   v = String(v).trim().replace(/[^\d+]/g,"");
@@ -132,7 +123,6 @@ function normalizeWA(v) {
   if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
   return v;
 }
-
 form.addEventListener("submit", function(e) {
   e.preventDefault();
   msg.innerHTML = "";
@@ -152,13 +142,13 @@ form.addEventListener("submit", function(e) {
   }).toString();
   fetch(WEB_APP_URL + "?" + qs, { method:"GET", mode:"no-cors" })
     .then(function(){
-      msg.innerHTML = '<div class="ok">&#10003; &iexcl;Listo! Est&aacute;s en la lista. Te escribiremos pronto.</div>';
+      msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
       btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
       form.reset();
       loadPromotores();
     })
     .catch(function(){
-      msg.innerHTML = '<div class="err">&#10007; No se pudo enviar. Reintenta.</div>';
+      msg.innerHTML = '<div class="err">No se pudo enviar. Reintenta.</div>';
       btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
     });
 });
