@@ -36,7 +36,7 @@
     nombre:   "Round Trip - Noche de Estreno",
     fecha:    "Sabado 14 de Marzo, 2026",
     lugar:    "Lima, Peru",
-    flyerFileId: "1mf_MFlc2dvF2fnNj9OryYMBwrV-Vn9XV"
+    flyerUrl: "https://lh3.googleusercontent.com/d/1mf_MFlc2dvF2fnNj9OryYMBwrV-Vn9XV=w800"
   };
   </script>
   <div class="grid">
@@ -82,17 +82,8 @@ document.getElementById("evento-info").innerHTML =
   '<p class="evento-nombre">' + EVENTO.nombre + '</p>' +
   '<p class="evento-fecha">' + EVENTO.fecha + ' - ' + EVENTO.lugar + '</p>';
 var flyerArea = document.getElementById("flyer-area");
-if (EVENTO.flyerFileId) {
-  var img = new Image();
-  var thumbUrl = "https://drive.google.com/thumbnail?id=" + EVENTO.flyerFileId + "&sz=w800";
-  var exportUrl = "https://drive.google.com/uc?export=view&id=" + EVENTO.flyerFileId;
-  img.onload = function() {
-    flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + thumbUrl + '" alt="Flyer" /></div>';
-  };
-  img.onerror = function() {
-    flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + exportUrl + '" alt="Flyer" /></div>';
-  };
-  img.src = thumbUrl;
+if (EVENTO.flyerUrl) {
+  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer del evento" referrerpolicy="no-referrer" /></div>';
 } else {
   flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer del evento proximamente</div>';
 }
