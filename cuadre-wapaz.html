@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Cuadre Wapaz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0b0b0f; --panel:#141422; --line:#2a2a40; --field:#0f0f18; --ink:#f4f2fa; --muted:#a29db4;
+  --accent:#7c3aed; --accent-soft:#9d6bff; --good:#6ee7a8; --bad:#ff7c8a; --warn:#ffcf70;
+  --display:"Unbounded","Archivo",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:20px 56px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:800;font-size:28px;margin:0}
+.sub{color:var(--muted);margin:0}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0;font-weight:700}
+.head b{font-variant-numeric:tabular-nums;font-size:14px}
+.row{display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center}
+.row label{font-weight:500}
+.row small,.note{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.note{margin:0}
+.money{position:relative}
+.money span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+input{width:100%;min-width:0;font:inherit;font-variant-numeric:tabular-nums;text-align:right;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 30px}
+input.txt{text-align:left;padding-left:10px}
+input.pct{padding-left:10px}
+input[type=date]{text-align:left;padding-left:10px;width:auto;color-scheme:dark}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent-soft);outline-offset:2px}
+.staff{display:flex;flex-direction:column;gap:8px}
+.srow{display:grid;grid-template-columns:1fr 112px 36px;gap:8px;align-items:center}
+.x{width:36px;height:36px;padding:0;border-radius:10px;background:transparent;color:var(--muted);border:1px solid var(--line);font-size:18px;line-height:1;cursor:pointer}
+button{font:inherit;font-weight:600;border-radius:10px;padding:11px 16px;cursor:pointer;border:1px solid var(--line);background:var(--field);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+.add{align-self:flex-start;background:transparent;border-style:dashed;padding:8px 12px}
+.sep{border:0;border-top:1px dashed var(--line);margin:4px 0;width:100%}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;white-space:nowrap;padding-left:12px}
+td small{display:block;color:var(--muted);font-size:12px}
+tr.sum td{border-bottom:none;font-weight:700;padding-top:10px}
+tr.grand td{border-top:2px solid var(--ink);border-bottom:none;font-weight:800;font-size:16px;padding-top:10px}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--field);border:1px solid var(--line);color:var(--muted);margin-left:4px}
+.result{background:var(--accent);border:none;color:#fff}
+.result h2{color:#fff;opacity:.85}
+.big{font-family:var(--display);font-weight:800;font-size:clamp(28px,9vw,42px);line-height:1.1;font-variant-numeric:tabular-nums;margin:0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-variant-numeric:tabular-nums}
+.split div{display:flex;flex-direction:column}
+.split small{opacity:.85;font-size:12px}
+.split b{font-size:18px}
+.banner{border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600}
+.banner.warn{background:#2b2411;color:var(--warn);border:1px solid #5a4a1c}
+.banner.bad{background:#2b1117;color:var(--bad);border:1px solid #5a1c28}
+.result .banner{background:#fff;color:#7a1220;border:none}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat small{color:var(--muted);font-size:12px}
+.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.status{font-size:13px;font-weight:600}
+.status.ok{color:var(--good)} .status.err{color:var(--bad)} .status.info{color:var(--muted)}
+.preview{width:100%;height:auto;border-radius:8px;background:#fff;display:block}
+details summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:12px}
+.terms{display:flex;flex-direction:column;gap:10px}
+.hist{display:flex;flex-direction:column;gap:6px}
+.hrow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.hrow:last-child{border-bottom:none}
+.hrow small{color:var(--muted);display:block;font-size:12px}
+.hrow button{padding:7px 12px;font-size:13px}
+textarea{width:100%;min-height:220px;font:inherit;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}
+#gate form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+#gate input{text-align:left;padding-left:12px;letter-spacing:.08em}
+#gate[hidden]{display:none}
+@media (max-width:400px){.row{grid-template-columns:1fr 122px}.srow{grid-template-columns:1fr 100px 36px}}
+</style>
+</head>
+<body>
+
+<div id="gate" hidden>
+  <form id="gateForm" autocomplete="off">
+    <h1>Cuadre Wapaz</h1>
+    <p class="sub">Ingresa el código de acceso para ver y guardar los cuadres.</p>
+    <label for="codeInput" class="note">Código de acceso</label>
+    <input id="codeInput" type="password" class="txt" autocomplete="off" required>
+    <button class="primary" id="gateBtn" type="submit">Entrar</button>
+    <div id="gateMsg" class="status"></div>
+  </form>
+</div>
+
+<div class="wrap" id="app">
+  <header>
+    <h1>Cuadre Wapaz</h1>
+    <p class="sub">Co-producción de los viernes en Titanium. Llena la noche y el reparto sale solo.</p>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+      <label for="fecha" class="sub">Fecha</label><input type="date" id="fecha">
+    </div>
+  </header>
+
+  <div id="bannerSetup" class="banner warn" hidden>Falta conectar Google Sheets. Mientras tanto la página calcula, pero no guarda nada.</div>
+  <div id="bannerTerms" class="banner warn" hidden>Faltan los términos del acuerdo. Complétalos abajo en "Términos del acuerdo" y toca "Guardar términos y planilla base". Hasta entonces no se muestra el pago.</div>
+
+  <section>
+    <div class="head"><h2>Ingresos</h2><b id="o_venta">—</b></div>
+    <div class="row"><label for="v_sistema">Venta del sistema<small>paga comisión de tarjeta</small></label><div class="money"><span>S/</span><input id="v_sistema" inputmode="decimal"></div></div>
+    <div class="row"><label for="v_efectivo">Efectivo Titanium</label><div class="money"><span>S/</span><input id="v_efectivo" inputmode="decimal"></div></div>
+    <div class="row"><label for="v_taq_ef">Taquilla · efectivo + Yape</label><div class="money"><span>S/</span><input id="v_taq_ef" inputmode="decimal"></div></div>
+    <div class="row"><label for="v_taq_pos">Taquilla · POS<small>paga comisión de tarjeta</small></label><div class="money"><span>S/</span><input id="v_taq_pos" inputmode="decimal"></div></div>
+    <div class="row"><label for="v_passline">Tótem Passline<small>paga comisión Passline</small></label><div class="money"><span>S/</span><input id="v_passline" inputmode="decimal"></div></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Planilla y gastos de la noche</h2><b id="o_planilla">—</b></div>
+    <div class="staff" id="staff"></div>
+    <button class="add" id="addStaff" type="button">+ Agregar persona</button>
+    <hr class="sep">
+    <div class="row"><label for="g_hielo">Hielo</label><div class="money"><span>S/</span><input id="g_hielo" inputmode="decimal"></div></div>
+    <div class="row"><label for="g_frutas">Frutas</label><div class="money"><span>S/</span><input id="g_frutas" inputmode="decimal"></div></div>
+    <div class="row"><label for="g_cortesias">Cortesías</label><div class="money"><span>S/</span><input id="g_cortesias" inputmode="decimal"></div></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Descuentos del acuerdo</h2><b id="o_varios">—</b></div>
+    <table><tbody id="breakdown"></tbody></table>
+  </section>
+
+  <section class="result" aria-live="polite">
+    <h2>Pagar a Wapaz</h2>
+    <p class="big" id="o_pago">—</p>
+    <div class="split">
+      <div><small>Ingresos menos egresos</small><b id="o_util">—</b></div>
+      <div><small id="o_casa_lbl">Titanium</small><b id="o_casa">—</b></div>
+    </div>
+    <div id="o_warn" class="banner" hidden>La noche dio pérdida: no hay utilidad que repartir.</div>
+  </section>
+
+  <section>
+    <h2>Convocatoria</h2>
+    <div class="stats">
+      <div class="stat"><label for="asistentes"><small>Asistentes</small></label><input id="asistentes" class="pct" inputmode="numeric"></div>
+      <div class="stat"><small>Ticket promedio</small><b id="o_ticket">—</b></div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="primary" id="saveBtn" type="button">Guardar cuadre en Google Sheets</button>
+    <button id="copy" type="button">Copiar resumen</button>
+    <button id="clear" type="button">Nueva noche</button>
+  </div>
+  <div id="saveStatus" class="status info" role="status"></div>
+  <textarea id="fallback" readonly hidden aria-label="Resumen para copiar"></textarea>
+
+  <section>
+    <div class="head"><h2>Imagen para los organizadores</h2></div>
+    <img id="preview" class="preview" alt="Cuadre de la noche en formato de hoja, listo para enviar" hidden>
+    <div class="note" id="imgEmpty">La imagen aparece cuando están completos los términos del acuerdo.</div>
+    <div class="actions">
+      <button class="primary" id="shareImg" type="button" hidden>Compartir o guardar imagen</button>
+      <span class="status ok" id="imgToast" hidden>Listo</span>
+    </div>
+  </section>
+
+  <section id="histSection" hidden>
+    <div class="head"><h2>Cuadres guardados</h2><button id="histReload" type="button" style="padding:6px 10px;font-size:13px">Actualizar</button></div>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <section>
+    <details id="termsBox">
+      <summary>Términos del acuerdo</summary>
+      <div class="terms">
+        <div class="row"><label for="t_reparto">Reparto de utilidad a Wapaz, %</label><input class="pct" id="t_reparto" inputmode="decimal"></div>
+        <div class="row"><label for="t_alquiler">Alquiler mínimo</label><div class="money"><span>S/</span><input id="t_alquiler" inputmode="decimal"></div></div>
+        <div class="row"><label for="t_servicio">Servicios</label><div class="money"><span>S/</span><input id="t_servicio" inputmode="decimal"></div></div>
+        <div class="row"><label for="t_licor">Costo de licor, % de los ingresos</label><input class="pct" id="t_licor" inputmode="decimal"></div>
+        <div class="row"><label for="t_visa">Comisión tarjeta, % de sistema + taquilla POS</label><input class="pct" id="t_visa" inputmode="decimal"></div>
+        <div class="row"><label for="t_passline">Comisión tótem Passline, %</label><input class="pct" id="t_passline" inputmode="decimal"></div>
+        <div class="row"><label for="t_umbral">Tope para IGV reducido</label><div class="money"><span>S/</span><input id="t_umbral" inputmode="decimal"></div></div>
+        <div class="row"><label for="t_igv_bajo">IGV si los ingresos son menores al tope, %</label><input class="pct" id="t_igv_bajo" inputmode="decimal"></div>
+        <div class="row"><label for="t_igv_alto">IGV si llegan o pasan el tope, %</label><input class="pct" id="t_igv_alto" inputmode="decimal"></div>
+        <div class="actions"><button id="saveTerms" type="button">Guardar términos y planilla base</button><span class="status info" id="termsStatus" role="status"></span></div>
+        <p class="note">Los términos y la planilla base se guardan en tu hoja de Google, no en el código de la web. Cualquiera con el código de acceso puede cambiarlos. La planilla base se carga sola en un dispositivo nuevo.</p>
+      </div>
+    </details>
+  </section>
+</div>
+
+<script>
+/* ===== Configuración ===== */
+// URL de la aplicación web de Apps Script (termina en /exec). Ver apps-script/cuadre-wapaz.gs
+const WEB_APP_URL = "";
+
+/* ===== Utilidades ===== */
+const $ = id => document.getElementById(id);
+const toNum = v => { const n = parseFloat(String(v == null ? '' : v).replace(/,/g,'')); return isNaN(n) ? 0 : n; };
+const num = id => toNum($(id).value);
+const fmt = n => (n<0?'-':'') + 'S/ ' + Math.abs(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => (n<0?'-':'') + Math.abs(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pctTxt = n => n.toLocaleString('es-PE',{maximumFractionDigits:2}) + '%';
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const TERM_IDS = ['t_reparto','t_alquiler','t_servicio','t_licor','t_visa','t_passline','t_umbral','t_igv_bajo','t_igv_alto'];
+const INPUT_IDS = ['v_sistema','v_efectivo','v_taq_ef','v_taq_pos','v_passline','g_hielo','g_frutas','g_cortesias','asistentes'];
+const DEFAULT_STAFF = []; // la planilla base vive en la hoja de Google, no en el código
+
+/* ===== Conexión con Google Sheets ===== */
+let CODE = '';
+const hasBackend = () => !!WEB_APP_URL;
+async function api(action, params){
+  const u = new URL(WEB_APP_URL);
+  u.searchParams.set('action', action);
+  u.searchParams.set('code', CODE);
+  Object.keys(params||{}).forEach(k=>u.searchParams.set(k, params[k]));
+  if(u.toString().length > 7500) throw new Error('demasiado_grande');
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), 20000);
+  try{
+    const r = await fetch(u.toString(), {signal: ctl.signal});
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+/* ===== Planilla ===== */
+let staffSeq = 0;
+function addStaffRow(name, amount){
+  const i = staffSeq++;
+  const d = document.createElement('div');
+  d.className = 'srow';
+  d.innerHTML = `<input class="txt" id="s_name_${i}" placeholder="Nombre / puesto" value="${esc(name||'')}" aria-label="Nombre o puesto">
+    <div class="money"><span>S/</span><input id="s_amt_${i}" inputmode="decimal" value="${esc(amount==null?'':amount)}" aria-label="Pago"></div>
+    <button class="x" type="button" aria-label="Quitar">×</button>`;
+  d.querySelector('.x').addEventListener('click',()=>{ d.remove(); update(); });
+  d.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',update));
+  $('staff').appendChild(d);
+}
+function setStaff(list){ $('staff').innerHTML=''; list.forEach(([n,a])=>addStaffRow(n,a)); }
+function staffList(){
+  return [...$('staff').querySelectorAll('.srow')].map(r=>{
+    const [n,a] = r.querySelectorAll('input');
+    return [n.value.trim(), toNum(a.value), a.value];
+  });
+}
+
+/* ===== Cálculo ===== */
+function termsReady(){ return TERM_IDS.every(id => String($(id).value).trim() !== ''); }
+function calc(){
+  const sistema=num('v_sistema'), efectivo=num('v_efectivo'), taqEf=num('v_taq_ef'), taqPos=num('v_taq_pos'), passline=num('v_passline');
+  const venta = sistema+efectivo+taqEf+taqPos+passline;
+  const staff = staffList();
+  const hielo=num('g_hielo'), frutas=num('g_frutas'), cort=num('g_cortesias');
+  const planilla = staff.reduce((s,x)=>s+x[1],0) + hielo + frutas + cort;
+  const umbral=num('t_umbral');
+  const igvRate = venta < umbral ? num('t_igv_bajo') : num('t_igv_alto');
+  const pLicor=num('t_licor'), pVisa=num('t_visa'), pPass=num('t_passline');
+  const baseTarjeta = sistema+taqPos;
+  const varios = [
+    ['IGV <span class="pill">'+pctTxt(igvRate)+'</span>', (venta<umbral?'ingresos menores a ':'ingresos desde ')+fmt(umbral), venta*igvRate/100],
+    ['Alquiler mínimo','',num('t_alquiler')],
+    ['Servicios','',num('t_servicio')],
+    ['Costo de licor <span class="pill">'+pctTxt(pLicor)+'</span>','de '+fmt(venta), venta*pLicor/100],
+    ['Visa <span class="pill">'+pctTxt(pVisa)+'</span>','de '+fmt(baseTarjeta)+' (sistema + taquilla POS)', baseTarjeta*pVisa/100],
+    ['Tótem Passline <span class="pill">'+pctTxt(pPass)+'</span>','de '+fmt(passline), passline*pPass/100],
+  ];
+  const variosTot = varios.reduce((s,l)=>s+l[2],0);
+  const gastos = planilla + variosTot;
+  const util = venta - gastos;
+  const reparto = num('t_reparto');
+  const pago = util>0 ? util*reparto/100 : 0;
+  const casa = util>0 ? util-pago : util;
+  const asis = num('asistentes');
+  const ticket = asis>0 ? venta/asis : 0;
+  return {sistema,efectivo,taqEf,taqPos,passline,venta,staff,hielo,frutas,cort,planilla,varios,variosTot,gastos,util,reparto,pago,casa,asis,ticket,igvRate};
+}
+function render(){
+  const r = calc(), ready = termsReady();
+  $('bannerTerms').hidden = ready;
+  $('o_venta').textContent = fmt(r.venta);
+  $('o_planilla').textContent = fmt(r.planilla);
+  $('o_varios').textContent = ready ? fmt(r.variosTot) : '—';
+  $('breakdown').innerHTML = ready
+    ? r.varios.map(l=>`<tr><td>${l[0]}${l[1]?`<small>${l[1]}</small>`:''}</td><td>${fmt(l[2])}</td></tr>`).join('')
+      + `<tr class="sum"><td>Subtotal varios</td><td>${fmt(r.variosTot)}</td></tr>`
+      + `<tr><td>Planilla y gastos de la noche</td><td>${fmt(r.planilla)}</td></tr>`
+      + `<tr class="grand"><td>Total gastos</td><td>${fmt(r.gastos)}</td></tr>`
+    : `<tr><td>Completa los términos del acuerdo para ver los descuentos.</td><td></td></tr>`;
+  $('o_pago').textContent = ready ? fmt(r.pago) : '—';
+  $('o_util').textContent = ready ? fmt(r.util) : '—';
+  $('o_casa_lbl').textContent = 'Titanium' + (ready && r.util>0 ? ' ('+pctTxt(100-r.reparto)+')' : '');
+  $('o_casa').textContent = ready ? fmt(r.casa) : '—';
+  $('o_warn').hidden = !(ready && r.util<0 && r.venta>0);
+  $('o_ticket').textContent = r.asis>0 ? fmt(r.ticket) : '—';
+  $('saveBtn').disabled = !ready || !hasBackend();
+  scheduleImage();
+}
+function persistLocal(){
+  store.set('cw_staff', staffList().map(x=>[x[0], x[2]]));
+  const t = {}; TERM_IDS.forEach(id=>t[id]=$(id).value); store.set('cw_terms', t);
+}
+function update(){ render(); persistLocal(); }
+
+/* ===== Resumen para copiar ===== */
+function summary(){
+  const r = calc();
+  const strip = s => s.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+  const f = fechaTexto();
+  let t = `*Cuadre Wapaz*${f?' – '+f:''}\n\n*Ingresos: ${fmt(r.venta)}*\n`;
+  [['Venta del sistema',r.sistema],['Efectivo Titanium',r.efectivo],['Taquilla efectivo + Yape',r.taqEf],['Taquilla POS',r.taqPos],['Tótem Passline',r.passline]]
+    .forEach(([k,v])=>{ if(v) t += `• ${k}: ${fmt(v)}\n`; });
+  t += `\n*Planilla y gastos: ${fmt(r.planilla)}*\n`;
+  r.staff.forEach(s=>{ if(s[1]) t += `• ${s[0]||'Sin nombre'}: ${fmt(s[1])}\n`; });
+  [['Hielo',r.hielo],['Frutas',r.frutas],['Cortesías',r.cort]].forEach(([k,v])=>{ if(v) t += `• ${k}: ${fmt(v)}\n`; });
+  t += `\n*Varios: ${fmt(r.variosTot)}*\n`;
+  r.varios.forEach(l=>{ if(l[2]) t += `• ${strip(l[0])}: ${fmt(l[2])}\n`; });
+  t += `\nTotal gastos: ${fmt(r.gastos)}\nIngresos menos egresos: ${fmt(r.util)}\n`;
+  t += `${pctTxt(100-r.reparto)} Titanium: ${fmt(r.casa)}\n*${pctTxt(r.reparto)} Wapaz: ${fmt(r.pago)}*`;
+  if(r.asis>0) t += `\n\nAsistentes: ${r.asis} · Ticket promedio: ${fmt(r.ticket)}`;
+  return t;
+}
+function fechaTexto(){
+  if(!$('fecha').value) return '';
+  return new Date($('fecha').value+'T12:00').toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+/* ===== Imagen tipo hoja ===== */
+const IMG = { font:'Archivo, Arial, Helvetica, sans-serif', ink:'#111', line:'#222', soft:'#bdbdbd', yellow:'#fff200', gray:'#c9c9c9', head:'#ececec' };
+let imgTimer = null, lastBlob = null;
+function scheduleImage(){ clearTimeout(imgTimer); imgTimer = setTimeout(drawImage, 250); }
+function drawImage(){
+  if(!termsReady()){ $('preview').hidden = true; $('shareImg').hidden = true; $('imgEmpty').hidden = false; lastBlob = null; return; }
+  $('preview').hidden = false; $('shareImg').hidden = false; $('imgEmpty').hidden = true;
+  const r = calc();
+  const strip = s => s.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+  const W = 1400, RH = 40;
+  const leftRows = r.staff.length + 3;
+  const leftH = 110 + RH*(1+leftRows+1) + 30 + RH*(1+r.varios.length+1) + 24 + 64;
+  const ingresos = [['VENTA DEL SISTEMA',r.sistema],['Efectivo Titanium',r.efectivo],['Taquilla - efectivo + Yape',r.taqEf],['Taquilla - POS',r.taqPos],['Tótem Passline',r.passline]];
+  const rightH = 110 + RH*ingresos.length + 64 + 50 + RH*3 + 40 + RH*3;
+  const H = Math.max(leftH, rightH) + 40;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0,0,W,H);
+  c.textBaseline = 'middle';
+  const text = (t,x,y,{size=19,bold=false,align='left',color=IMG.ink}={})=>{
+    c.font = `${bold?700:500} ${size}px ${IMG.font}`; c.fillStyle = color; c.textAlign = align; c.fillText(t,x,y);
+  };
+  const box = (x,y,w,h,{fill=null,stroke=IMG.soft,lw=1}={})=>{
+    if(fill){ c.fillStyle=fill; c.fillRect(x,y,w,h); }
+    c.strokeStyle=stroke; c.lineWidth=lw; c.strokeRect(x+.5,y+.5,w,h);
+  };
+  const money = (x,y,w,h,v,{fill=null,size=19,bold=false}={})=>{
+    box(x,y,w,h,{fill});
+    text('S/',x+10,y+h/2,{size,bold});
+    text(v===0 ? '-' : fmtN(v),x+w-12,y+h/2,{size,bold,align:'right'});
+  };
+  const fit = (t,max,size,bold)=>{ c.font=`${bold?700:500} ${size}px ${IMG.font}`; if(c.measureText(t).width<=max) return t; while(t.length>1 && c.measureText(t+'…').width>max) t=t.slice(0,-1); return t+'…'; };
+
+  text('CUADRE WAPAZ',30,42,{size:34,bold:true});
+  const f = fechaTexto();
+  text((f ? f.charAt(0).toUpperCase()+f.slice(1)+' · ' : '')+'Titanium · co-producción',30,80,{size:19,color:'#555'});
+
+  const lx=30, dw=460, vw=190, lw=dw+vw;
+  let y = 110;
+  box(lx,y,dw,RH,{fill:IMG.head}); box(lx+dw,y,vw,RH,{fill:IMG.head});
+  text('Descripción',lx+12,y+RH/2,{bold:true}); text('TOTAL',lx+dw+vw/2,y+RH/2,{bold:true,align:'center'});
+  y += RH;
+  const planRows = r.staff.map(s=>[s[0]||'—',s[1]]).concat([['Hielo (variable)',r.hielo],['Frutas (variable)',r.frutas],['Cortesías (variable)',r.cort]]);
+  planRows.forEach(([n,v])=>{ box(lx,y,dw,RH); text(fit(n,dw-24,19,false),lx+12,y+RH/2); money(lx+dw,y,vw,RH,v); y+=RH; });
+  box(lx,y,dw,RH); text('Planilla y gastos de la noche',lx+12,y+RH/2,{bold:true,color:'#444'}); money(lx+dw,y,vw,RH,r.planilla,{fill:IMG.yellow,bold:true});
+  box(lx,110,lw,y+RH-110,{stroke:IMG.line,lw:2});
+  y += RH + 30;
+
+  const vy0 = y;
+  box(lx,y,lw,RH,{fill:IMG.head}); text('VARIOS',lx+12,y+RH/2,{bold:true}); y+=RH;
+  r.varios.forEach(l=>{ box(lx,y,dw,RH); text(strip(l[0]),lx+12,y+RH/2); money(lx+dw,y,vw,RH,l[2]); y+=RH; });
+  box(lx,y,dw,RH); money(lx+dw,y,vw,RH,r.variosTot,{fill:IMG.yellow,bold:true});
+  box(lx,vy0,lw,y+RH-vy0,{stroke:IMG.line,lw:2});
+  y += RH + 24;
+
+  box(lx,y,dw,64,{stroke:IMG.line,lw:2}); text('total gastos',lx+dw/2,y+32,{size:30,bold:true,align:'center'});
+  money(lx+dw,y,vw,64,r.gastos,{fill:IMG.gray,size:22,bold:true}); box(lx+dw,y,vw,64,{stroke:IMG.line,lw:2});
+
+  const rx=740, rlw=400, rvw=230, rw=rlw+rvw;
+  y = 110;
+  ingresos.forEach(([n,v])=>{ box(rx,y,rlw,RH); text(n,rx+rlw/2,y+RH/2,{bold:true,align:'center',size:18}); money(rx+rlw,y,rvw,RH,v,{fill:IMG.yellow}); y+=RH; });
+  box(rx,y,rlw,64); text('total Ingresos',rx+rlw/2,y+32,{size:30,bold:true,align:'center'});
+  money(rx+rlw,y,rvw,64,r.venta,{fill:IMG.yellow,size:22,bold:true});
+  box(rx,110,rw,y+64-110,{stroke:IMG.line,lw:2});
+  y += 64 + 50;
+
+  const rep = r.reparto, casaPct = 100-rep;
+  const lbl = n => n.toLocaleString('es-PE',{maximumFractionDigits:2})+'%';
+  [['INGRESOS MENOS EGRESOS',r.util,20],[lbl(casaPct)+' titanium',r.casa,22],[lbl(rep)+' wapaz',r.pago,22]].forEach(([n,v,s])=>{
+    box(rx,y,rlw,RH,{stroke:IMG.line}); text(n,rx+rlw/2,y+RH/2,{bold:true,size:s,align:'center'});
+    money(rx+rlw,y,rvw,RH,v,{fill:IMG.gray,bold:true,size:20}); box(rx+rlw,y,rvw,RH,{stroke:IMG.line});
+    y+=RH;
+  });
+  box(rx,y-RH*3,rw,RH*3,{stroke:IMG.line,lw:2});
+  y += 40;
+
+  const cx=rx+60, cw=rw-60, cl=380;
+  box(cx,y,cw,RH); text('Proyección de convocatoria',cx+10,y+RH/2,{size:17}); y+=RH;
+  box(cx,y,cl,RH); text('cantidad',cx+10,y+RH/2,{size:17}); box(cx+cl,y,cw-cl,RH); text(r.asis?String(r.asis):'-',cx+cw-12,y+RH/2,{size:17,align:'right'}); y+=RH;
+  box(cx,y,cl,RH); text('ticket promedio',cx+10,y+RH/2,{size:17}); box(cx+cl,y,cw-cl,RH); text(r.asis>0?fmtN(r.ticket):'-',cx+cw-12,y+RH/2,{size:17,align:'right'});
+
+  $('preview').src = cv.toDataURL('image/png');
+  cv.toBlob(b=>{ lastBlob = b; }, 'image/png');
+}
+$('shareImg').addEventListener('click', async ()=>{
+  if(!lastBlob) return;
+  const name = 'cuadre-wapaz-' + ($('fecha').value || 'noche') + '.png';
+  const file = new File([lastBlob], name, {type:'image/png'});
+  const toast = ()=>{ $('imgToast').hidden=false; setTimeout(()=>$('imgToast').hidden=true,1800); };
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:'Cuadre Wapaz'});
+      toast(); return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastBlob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  toast();
+});
+
+/* ===== Guardado en Google Sheets ===== */
+function setStatus(id, text, kind){ const el=$(id); el.textContent=text; el.className='status '+(kind||'info'); }
+function errMsg(e){
+  const m = (e && e.message) || '';
+  if(m==='codigo') return 'Código incorrecto.';
+  if(m==='demasiado_grande') return 'El cuadre es demasiado grande para enviarse. Quita algunas filas de planilla.';
+  if(e && e.name==='AbortError') return 'Tardó demasiado. Revisa tu internet e intenta de nuevo.';
+  return 'No se pudo conectar con Google Sheets. Revisa tu internet e intenta de nuevo.';
+}
+async function saveCuadre(){
+  if(!$('fecha').value){ setStatus('saveStatus','Elige la fecha del cuadre antes de guardar.','err'); return; }
+  const r = calc();
+  const terms = {}; TERM_IDS.forEach(id=>terms[id]=toNum($(id).value));
+  const detalle = {
+    v:{sistema:r.sistema,efectivo:r.efectivo,taqEf:r.taqEf,taqPos:r.taqPos,passline:r.passline},
+    staff:r.staff.map(x=>[x[0],x[1]]),
+    g:{hielo:r.hielo,frutas:r.frutas,cort:r.cort},
+    asis:r.asis, terms
+  };
+  const s = {venta:r.venta,planilla:r.planilla,varios:r.variosTot,gastos:r.gastos,util:r.util,pago:r.pago,casa:r.casa,asis:r.asis,ticket:r.ticket};
+  $('saveBtn').disabled = true; setStatus('saveStatus','Guardando…','info');
+  try{
+    const res = await api('save', {d: JSON.stringify({fecha:$('fecha').value, detalle, s})});
+    if(!res.ok) throw new Error(res.error||'error');
+    setStatus('saveStatus', res.nueva ? 'Cuadre guardado en Google Sheets.' : 'Ya existía un cuadre de esa fecha y se actualizó.', 'ok');
+    loadHistory();
+  }catch(e){ setStatus('saveStatus', errMsg(e), 'err'); }
+  finally{ $('saveBtn').disabled = !termsReady() || !hasBackend(); }
+}
+async function loadHistory(){
+  if(!hasBackend()) return;
+  $('histSection').hidden = false;
+  $('hist').innerHTML = '<span class="note">Cargando…</span>';
+  try{
+    const res = await api('list');
+    if(!res.ok) throw new Error(res.error||'error');
+    if(!res.items.length){ $('hist').innerHTML = '<span class="note">Todavía no hay cuadres guardados.</span>'; return; }
+    $('hist').innerHTML = res.items.map(it=>{
+      const f = new Date(it.fecha+'T12:00').toLocaleDateString('es-PE',{weekday:'short',day:'numeric',month:'short'});
+      return `<div class="hrow"><div><b>${esc(f)}</b><small>Ingresos ${fmt(it.venta)}</small></div><b>${fmt(it.pago)}</b><button type="button" data-f="${esc(it.fecha)}">Abrir</button></div>`;
+    }).join('');
+    $('hist').querySelectorAll('button[data-f]').forEach(b=>b.addEventListener('click',()=>openCuadre(b.dataset.f)));
+  }catch(e){ $('hist').innerHTML = `<span class="status err">${esc(errMsg(e))}</span>`; }
+}
+async function openCuadre(fecha){
+  setStatus('saveStatus','Abriendo cuadre…','info');
+  try{
+    const res = await api('get', {fecha});
+    if(!res.ok) throw new Error(res.error||'error');
+    const d = res.detalle || {};
+    $('fecha').value = fecha;
+    const v = d.v||{}, g = d.g||{};
+    $('v_sistema').value = v.sistema||''; $('v_efectivo').value = v.efectivo||''; $('v_taq_ef').value = v.taqEf||'';
+    $('v_taq_pos').value = v.taqPos||''; $('v_passline').value = v.passline||'';
+    $('g_hielo').value = g.hielo||''; $('g_frutas').value = g.frutas||''; $('g_cortesias').value = g.cort||'';
+    $('asistentes').value = d.asis||'';
+    setStaff((d.staff||[]).map(x=>[x[0],x[1]]));
+    update();
+    setStatus('saveStatus','Cuadre del '+fecha+' abierto. Se calcula con los términos actuales.','ok');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }catch(e){ setStatus('saveStatus', errMsg(e), 'err'); }
+}
+async function saveTerms(){
+  if(!termsReady()){ setStatus('termsStatus','Completa todos los campos.','err'); return; }
+  if(!hasBackend()){ setStatus('termsStatus','Guardados solo en este dispositivo.','info'); persistLocal(); return; }
+  const t = {}; TERM_IDS.forEach(id=>t[id]=toNum($(id).value));
+  t.planilla = JSON.stringify(staffList().filter(x=>x[0]||x[1]).map(x=>[x[0],x[1]]));
+  setStatus('termsStatus','Guardando…','info');
+  try{
+    const res = await api('saveConfig', {d: JSON.stringify(t)});
+    if(!res.ok) throw new Error(res.error||'error');
+    persistLocal();
+    setStatus('termsStatus','Términos y planilla base guardados en Google Sheets.','ok');
+  }catch(e){ setStatus('termsStatus', errMsg(e), 'err'); }
+}
+async function loadTermsFromSheet(){
+  try{
+    const res = await api('config');
+    if(res.ok && res.terms){
+      TERM_IDS.forEach(id=>{ if(res.terms[id] !== undefined && res.terms[id] !== '') $(id).value = res.terms[id]; });
+      if(res.terms.planilla){
+        try{ const base = JSON.parse(res.terms.planilla); if(Array.isArray(base) && !staffList().some(x=>x[0]||x[1])) setStaff(base); }catch(e){}
+      }
+      update();
+    }
+  }catch(e){}
+}
+
+/* ===== Acceso ===== */
+async function startSession(){
+  $('gate').hidden = true;
+  await loadTermsFromSheet();
+  loadHistory();
+}
+async function tryCode(code){
+  CODE = code;
+  const res = await api('ping');
+  return !!(res && res.ok);
+}
+$('gateForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const code = $('codeInput').value.trim();
+  if(!code) return;
+  $('gateBtn').disabled = true; setStatus('gateMsg','Verificando…','info');
+  try{
+    if(await tryCode(code)){ store.set('cw_code', code); $('codeInput').value=''; await startSession(); }
+    else { CODE=''; setStatus('gateMsg','Código incorrecto.','err'); }
+  }catch(err){ CODE=''; setStatus('gateMsg', errMsg(err), 'err'); }
+  finally{ $('gateBtn').disabled = false; }
+});
+
+/* ===== Eventos y arranque ===== */
+document.querySelectorAll('.wrap input').forEach(i=>{ if(!i.closest('.srow') && i.id!=='fecha') i.addEventListener('input',update); });
+$('fecha').addEventListener('input', scheduleImage);
+$('addStaff').addEventListener('click',()=>{ addStaffRow('',''); update(); const rows=$('staff').querySelectorAll('.srow'); rows[rows.length-1].querySelector('input').focus(); });
+$('saveBtn').addEventListener('click', saveCuadre);
+$('saveTerms').addEventListener('click', saveTerms);
+$('histReload').addEventListener('click', loadHistory);
+$('copy').addEventListener('click',()=>{
+  const t = summary();
+  const done = ()=>setStatus('saveStatus','Resumen copiado.','ok');
+  const fb = ()=>{ const a=$('fallback'); a.value=t; a.hidden=false; a.focus(); a.select(); };
+  try{ navigator.clipboard.writeText(t).then(done,fb); }catch(e){ fb(); }
+});
+$('clear').addEventListener('click',()=>{
+  INPUT_IDS.forEach(id=>$(id).value='');
+  $('fallback').hidden=true; setStatus('saveStatus','',''); update(); $('v_sistema').focus();
+});
+
+(function init(){
+  const st = store.get('cw_terms'); if(st) TERM_IDS.forEach(id=>{ if(st[id]!=null) $(id).value = st[id]; });
+  const ss = store.get('cw_staff');
+  setStaff(Array.isArray(ss) && ss.length ? ss : DEFAULT_STAFF);
+  const d = new Date(); d.setDate(d.getDate()+((5-d.getDay()+7)%7));
+  $('fecha').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  render();
+  if(document.fonts && document.fonts.load){ document.fonts.load('700 20px Archivo').then(scheduleImage, ()=>{}); }
+  if(!hasBackend()){ $('bannerSetup').hidden = false; return; }
+  $('gate').hidden = false;
+  const saved = store.get('cw_code');
+  if(saved){
+    tryCode(saved).then(ok=>{ if(ok) startSession(); else { CODE=''; store.del('cw_code'); $('codeInput').focus(); } })
+                  .catch(()=>{ CODE=''; $('codeInput').focus(); });
+  } else $('codeInput').focus();
+})();
+</script>
+</body>
+</html>
