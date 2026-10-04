@@ -119,6 +119,8 @@ textarea{width:100%;min-height:220px;font:inherit;background:var(--field);color:
     <div class="row"><label for="v_taq_ef">Taquilla · efectivo + Yape</label><div class="money"><span>S/</span><input id="v_taq_ef" inputmode="decimal"></div></div>
     <div class="row"><label for="v_taq_pos">Taquilla · POS<small>paga comisión de tarjeta</small></label><div class="money"><span>S/</span><input id="v_taq_pos" inputmode="decimal"></div></div>
     <div class="row"><label for="v_passline">Tótem Passline<small>paga comisión Passline</small></label><div class="money"><span>S/</span><input id="v_passline" inputmode="decimal"></div></div>
+    <hr class="sep">
+    <div class="row"><label for="v_sinconsumo">Entradas pagadas sin consumo<small>no cambian los ingresos; se restan solo de la base del costo de licor</small></label><div class="money"><span>S/</span><input id="v_sinconsumo" inputmode="decimal"></div></div>
   </section>
 
   <section>
@@ -129,6 +131,7 @@ textarea{width:100%;min-height:220px;font:inherit;background:var(--field);color:
     <div class="row"><label for="g_hielo">Hielo</label><div class="money"><span>S/</span><input id="g_hielo" inputmode="decimal"></div></div>
     <div class="row"><label for="g_frutas">Frutas</label><div class="money"><span>S/</span><input id="g_frutas" inputmode="decimal"></div></div>
     <div class="row"><label for="g_cortesias">Cortesías</label><div class="money"><span>S/</span><input id="g_cortesias" inputmode="decimal"></div></div>
+    <div class="row"><label for="g_noche">Gastos de la noche<small>otros gastos del local; suman al total de gastos</small></label><div class="money"><span>S/</span><input id="g_noche" inputmode="decimal"></div></div>
   </section>
 
   <section>
@@ -218,7 +221,7 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 const TERM_IDS = ['t_reparto','t_alquiler','t_servicio','t_licor','t_visa','t_passline','t_umbral','t_igv_bajo','t_igv_alto'];
-const INPUT_IDS = ['v_sistema','v_efectivo','v_taq_ef','v_taq_pos','v_passline','g_hielo','g_frutas','g_cortesias','asistentes'];
+const INPUT_IDS = ['v_sistema','v_efectivo','v_taq_ef','v_taq_pos','v_passline','v_sinconsumo','g_hielo','g_frutas','g_cortesias','g_noche','asistentes'];
 const DEFAULT_STAFF = []; // la planilla base vive en la hoja de Google, no en el código
 
 /* ===== Conexión con Google Sheets ===== */
@@ -268,7 +271,8 @@ function calc(){
   const sistema=num('v_sistema'), efectivo=num('v_efectivo'), taqEf=num('v_taq_ef'), taqPos=num('v_taq_pos'), passline=num('v_passline');
   const venta = sistema+efectivo+taqEf+taqPos+passline;
   const staff = staffList();
-  const hielo=num('g_hielo'), frutas=num('g_frutas'), cort=num('g_cortesias');
+  const hielo=num('g_hielo'), frutas=num('g_frutas'), cort=num('g_cortesias'), otros=num('g_noche');
+  const sinC=num('v_sinconsumo'), baseLicor=Math.max(venta-sinC,0);
   const planilla = staff.reduce((s,x)=>s+x[1],0) + hielo + frutas + cort;
   const umbral=num('t_umbral');
   const igvRate = venta < umbral ? num('t_igv_bajo') : num('t_igv_alto');
@@ -278,19 +282,19 @@ function calc(){
     ['IGV <span class="pill">'+pctTxt(igvRate)+'</span>', (venta<umbral?'ingresos menores a ':'ingresos desde ')+fmt(umbral), venta*igvRate/100],
     ['Alquiler mínimo','',num('t_alquiler')],
     ['Servicios','',num('t_servicio')],
-    ['Costo de licor <span class="pill">'+pctTxt(pLicor)+'</span>','de '+fmt(venta), venta*pLicor/100],
+    ['Costo de licor <span class="pill">'+pctTxt(pLicor)+'</span>', sinC>0 ? 'de '+fmt(baseLicor)+' (ingresos menos '+fmt(sinC)+' de entradas sin consumo)' : 'de '+fmt(venta), baseLicor*pLicor/100, sinC>0 ? ' · base '+fmtN(baseLicor) : ''],
     ['Visa <span class="pill">'+pctTxt(pVisa)+'</span>','de '+fmt(baseTarjeta)+' (sistema + taquilla POS)', baseTarjeta*pVisa/100],
     ['Tótem Passline <span class="pill">'+pctTxt(pPass)+'</span>','de '+fmt(passline), passline*pPass/100],
   ];
   const variosTot = varios.reduce((s,l)=>s+l[2],0);
-  const gastos = planilla + variosTot;
+  const gastos = planilla + otros + variosTot;
   const util = venta - gastos;
   const reparto = num('t_reparto');
   const pago = util>0 ? util*reparto/100 : 0;
   const casa = util>0 ? util-pago : util;
   const asis = num('asistentes');
   const ticket = asis>0 ? venta/asis : 0;
-  return {sistema,efectivo,taqEf,taqPos,passline,venta,staff,hielo,frutas,cort,planilla,varios,variosTot,gastos,util,reparto,pago,casa,asis,ticket,igvRate};
+  return {sistema,efectivo,taqEf,taqPos,passline,venta,sinC,baseLicor,otros,staff,hielo,frutas,cort,planilla,varios,variosTot,gastos,util,reparto,pago,casa,asis,ticket,igvRate};
 }
 function render(){
   const r = calc(), ready = termsReady();
@@ -302,6 +306,7 @@ function render(){
     ? r.varios.map(l=>`<tr><td>${l[0]}${l[1]?`<small>${l[1]}</small>`:''}</td><td>${fmt(l[2])}</td></tr>`).join('')
       + `<tr class="sum"><td>Subtotal varios</td><td>${fmt(r.variosTot)}</td></tr>`
       + `<tr><td>Planilla y gastos de la noche</td><td>${fmt(r.planilla)}</td></tr>`
+      + (r.otros>0 ? `<tr><td>Gastos de la noche</td><td>${fmt(r.otros)}</td></tr>` : '')
       + `<tr class="grand"><td>Total gastos</td><td>${fmt(r.gastos)}</td></tr>`
     : `<tr><td>Completa los términos del acuerdo para ver los descuentos.</td><td></td></tr>`;
   $('o_pago').textContent = ready ? fmt(r.pago) : '—';
@@ -330,8 +335,9 @@ function summary(){
   t += `\n*Planilla y gastos: ${fmt(r.planilla)}*\n`;
   r.staff.forEach(s=>{ if(s[1]) t += `• ${s[0]||'Sin nombre'}: ${fmt(s[1])}\n`; });
   [['Hielo',r.hielo],['Frutas',r.frutas],['Cortesías',r.cort]].forEach(([k,v])=>{ if(v) t += `• ${k}: ${fmt(v)}\n`; });
+  if(r.otros>0) t += `\nGastos de la noche: ${fmt(r.otros)}\n`;
   t += `\n*Varios: ${fmt(r.variosTot)}*\n`;
-  r.varios.forEach(l=>{ if(l[2]) t += `• ${strip(l[0])}: ${fmt(l[2])}\n`; });
+  r.varios.forEach(l=>{ if(l[2]) t += `• ${strip(l[0])}${l[3]||''}: ${fmt(l[2])}\n`; });
   t += `\nTotal gastos: ${fmt(r.gastos)}\nIngresos menos egresos: ${fmt(r.util)}\n`;
   t += `${pctTxt(100-r.reparto)} Titanium: ${fmt(r.casa)}\n*${pctTxt(r.reparto)} Wapaz: ${fmt(r.pago)}*`;
   if(r.asis>0) t += `\n\nAsistentes: ${r.asis} · Ticket promedio: ${fmt(r.ticket)}`;
@@ -352,7 +358,7 @@ function drawImage(){
   const r = calc();
   const strip = s => s.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
   const W = 1400, RH = 40;
-  const leftRows = r.staff.length + 3;
+  const leftRows = r.staff.length + 3 + (r.otros>0 ? 1 : 0);
   const leftH = 110 + RH*(1+leftRows+1) + 30 + RH*(1+r.varios.length+1) + 24 + 64;
   const ingresos = [['VENTA DEL SISTEMA',r.sistema],['Efectivo Titanium',r.efectivo],['Taquilla - efectivo + Yape',r.taqEf],['Taquilla - POS',r.taqPos],['Tótem Passline',r.passline]];
   const rightH = 110 + RH*ingresos.length + 64 + 50 + RH*3 + 40 + RH*3;
@@ -388,12 +394,13 @@ function drawImage(){
   const planRows = r.staff.map(s=>[s[0]||'—',s[1]]).concat([['Hielo (variable)',r.hielo],['Frutas (variable)',r.frutas],['Cortesías (variable)',r.cort]]);
   planRows.forEach(([n,v])=>{ box(lx,y,dw,RH); text(fit(n,dw-24,19,false),lx+12,y+RH/2); money(lx+dw,y,vw,RH,v); y+=RH; });
   box(lx,y,dw,RH); text('Planilla y gastos de la noche',lx+12,y+RH/2,{bold:true,color:'#444'}); money(lx+dw,y,vw,RH,r.planilla,{fill:IMG.yellow,bold:true});
+  if(r.otros>0){ y+=RH; box(lx,y,dw,RH); text('Gastos noche',lx+12,y+RH/2); money(lx+dw,y,vw,RH,r.otros); }
   box(lx,110,lw,y+RH-110,{stroke:IMG.line,lw:2});
   y += RH + 30;
 
   const vy0 = y;
   box(lx,y,lw,RH,{fill:IMG.head}); text('VARIOS',lx+12,y+RH/2,{bold:true}); y+=RH;
-  r.varios.forEach(l=>{ box(lx,y,dw,RH); text(strip(l[0]),lx+12,y+RH/2); money(lx+dw,y,vw,RH,l[2]); y+=RH; });
+  r.varios.forEach(l=>{ box(lx,y,dw,RH); text(fit(strip(l[0])+(l[3]||''),dw-24,19,false),lx+12,y+RH/2); money(lx+dw,y,vw,RH,l[2]); y+=RH; });
   box(lx,y,dw,RH); money(lx+dw,y,vw,RH,r.variosTot,{fill:IMG.yellow,bold:true});
   box(lx,vy0,lw,y+RH-vy0,{stroke:IMG.line,lw:2});
   y += RH + 24;
@@ -461,9 +468,9 @@ async function saveCuadre(){
   const r = calc();
   const terms = {}; TERM_IDS.forEach(id=>terms[id]=toNum($(id).value));
   const detalle = {
-    v:{sistema:r.sistema,efectivo:r.efectivo,taqEf:r.taqEf,taqPos:r.taqPos,passline:r.passline},
+    v:{sistema:r.sistema,efectivo:r.efectivo,taqEf:r.taqEf,taqPos:r.taqPos,passline:r.passline,sinConsumo:r.sinC},
     staff:r.staff.map(x=>[x[0],x[1]]),
-    g:{hielo:r.hielo,frutas:r.frutas,cort:r.cort},
+    g:{hielo:r.hielo,frutas:r.frutas,cort:r.cort,noche:r.otros},
     asis:r.asis, terms
   };
   const s = {venta:r.venta,planilla:r.planilla,varios:r.variosTot,gastos:r.gastos,util:r.util,pago:r.pago,casa:r.casa,asis:r.asis,ticket:r.ticket,
@@ -502,8 +509,8 @@ async function openCuadre(fecha){
     $('fecha').value = fecha;
     const v = d.v||{}, g = d.g||{};
     $('v_sistema').value = v.sistema||''; $('v_efectivo').value = v.efectivo||''; $('v_taq_ef').value = v.taqEf||'';
-    $('v_taq_pos').value = v.taqPos||''; $('v_passline').value = v.passline||'';
-    $('g_hielo').value = g.hielo||''; $('g_frutas').value = g.frutas||''; $('g_cortesias').value = g.cort||'';
+    $('v_taq_pos').value = v.taqPos||''; $('v_passline').value = v.passline||''; $('v_sinconsumo').value = v.sinConsumo||'';
+    $('g_hielo').value = g.hielo||''; $('g_frutas').value = g.frutas||''; $('g_cortesias').value = g.cort||''; $('g_noche').value = g.noche||'';
     $('asistentes').value = d.asis||'';
     setStaff((d.staff||[]).map(x=>[x[0],x[1]]));
     if(d.terms) TERM_IDS.forEach(id=>{ if(d.terms[id]!==undefined) $(id).value = d.terms[id]; });

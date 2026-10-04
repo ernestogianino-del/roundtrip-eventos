@@ -33,15 +33,16 @@
 var HOJA = 'cuadre web';
 var PREFIJO_NEG = 'Negociación ';
 var ENCABEZADOS = ['Fecha', 'Sistema', 'Efectivo Titanium', 'Taquilla efectivo/Yape', 'Taquilla POS',
-  'Passline', 'Ingresos', 'Planilla staff', 'Hielo', 'Frutas', 'Cortesias', 'IGV', 'Alquiler',
-  'Servicios', 'Costo licor', 'Visa', 'Comision Passline', 'Total gastos', 'Utilidad', 'Wapaz',
+  'Passline', 'Ingresos', 'Entradas sin consumo', 'Planilla staff', 'Hielo', 'Frutas', 'Cortesias',
+  'Gastos noche', 'IGV', 'Alquiler', 'Servicios', 'Costo licor', 'Visa', 'Comision Passline',
+  'Total gastos', 'Utilidad', 'Wapaz',
   'Titanium', 'Asistentes', 'Ticket promedio', 'Negociacion', 'Guardado'];
 var COL_FECHA = 1;
-var COL_ASIS = 22;
-var COL_TICKET = 23;
-var COL_NEG = 24;
-var COL_GUARDADO = 25;
-var COL_PLANILLA = 8;
+var COL_ASIS = 24;
+var COL_TICKET = 25;
+var COL_NEG = 26;
+var COL_GUARDADO = 27;
+var COL_PLANILLA = 9;
 var FILA_TOTALES = 2;
 var FILA_DATOS = 3;
 
@@ -100,16 +101,17 @@ function hoja_() {
   if (!sh) sh = ss.insertSheet(HOJA);
   if (sh.getRange(1, 1).getValue() === '') {
     sh.getRange(1, 1, 1, ENCABEZADOS.length).setValues([ENCABEZADOS]).setFontWeight('bold');
-    var totales = ['TOTAL'];
+    var totales = [''];
     for (var c = 2; c <= COL_ASIS; c++) {
       var L = letra_(c);
       totales.push('=SUM(' + L + FILA_DATOS + ':' + L + ')');
     }
     totales.push('=IFERROR(G' + FILA_TOTALES + '/' + letra_(COL_ASIS) + FILA_TOTALES + ',0)');
     sh.getRange(FILA_TOTALES, 1, 1, totales.length).setFormulas([totales]).setFontWeight('bold');
+    sh.getRange(FILA_TOTALES, 1).setNumberFormat('@').setValue('TOTAL');
     sh.setFrozenRows(FILA_TOTALES);
     sh.getRange(1, COL_FECHA, sh.getMaxRows(), 1).setNumberFormat('@');
-    sh.getRange(FILA_TOTALES, 2, sh.getMaxRows() - 1, 21).setNumberFormat('#,##0.00');
+    sh.getRange(FILA_TOTALES, 2, sh.getMaxRows() - 1, 22).setNumberFormat('#,##0.00');
     sh.getRange(FILA_TOTALES, COL_ASIS, sh.getMaxRows() - 1, 1).setNumberFormat('0');
     sh.getRange(FILA_TOTALES, COL_TICKET, sh.getMaxRows() - 1, 1).setNumberFormat('#,##0.00');
   } else if (sh.getRange(1, COL_GUARDADO).getValue() !== 'Guardado' || sh.getRange(1, COL_GUARDADO + 1).getValue() !== '') {
@@ -163,7 +165,7 @@ function guardarCuadre_(d) {
   var v = (d.detalle && d.detalle.v) || {};
   var g = (d.detalle && d.detalle.g) || {};
   var fila = [fecha, num_(v.sistema), num_(v.efectivo), num_(v.taqEf), num_(v.taqPos), num_(v.passline),
-    num_(s.venta), num_(s.staff), num_(g.hielo), num_(g.frutas), num_(g.cort),
+    num_(s.venta), num_(v.sinConsumo), num_(s.staff), num_(g.hielo), num_(g.frutas), num_(g.cort), num_(g.noche),
     num_(s.igv), num_(s.alquiler), num_(s.servicio), num_(s.licor), num_(s.visa), num_(s.tpass),
     num_(s.gastos), num_(s.util), num_(s.pago), num_(s.casa), num_(s.asis), num_(s.ticket),
     neg, new Date()];
@@ -175,7 +177,7 @@ function guardarCuadre_(d) {
   sh.getRange(r, COL_NEG).setNumberFormat('@');
   sh.getRange(r, 1, 1, fila.length).setValues([fila]);
   sh.getRange(r, COL_PLANILLA).setNote(nota);
-  sh.getRange(r, 2, 1, 21).setNumberFormat('#,##0.00');
+  sh.getRange(r, 2, 1, 22).setNumberFormat('#,##0.00');
   sh.getRange(r, COL_ASIS).setNumberFormat('0');
   sh.getRange(r, COL_TICKET).setNumberFormat('#,##0.00');
   sh.getRange(r, COL_GUARDADO).setNumberFormat('dd/mm/yyyy hh:mm');
@@ -190,7 +192,7 @@ function listarCuadres_(max) {
   var items = vals.map(function (v) {
     var g = v[COL_GUARDADO - 1];
     return {
-      fecha: String(v[0]), venta: num_(v[6]), util: num_(v[18]), pago: num_(v[19]),
+      fecha: String(v[0]), venta: num_(v[6]), util: num_(v[20]), pago: num_(v[21]),
       guardado: g instanceof Date ? g.toISOString() : String(g)
     };
   });
@@ -215,8 +217,8 @@ function obtenerCuadre_(fecha) {
   return {
     ok: true, neg: neg,
     detalle: {
-      v: { sistema: num_(f[1]), efectivo: num_(f[2]), taqEf: num_(f[3]), taqPos: num_(f[4]), passline: num_(f[5]) },
-      g: { hielo: num_(f[8]), frutas: num_(f[9]), cort: num_(f[10]) },
+      v: { sistema: num_(f[1]), efectivo: num_(f[2]), taqEf: num_(f[3]), taqPos: num_(f[4]), passline: num_(f[5]), sinConsumo: num_(f[7]) },
+      g: { hielo: num_(f[9]), frutas: num_(f[10]), cort: num_(f[11]), noche: num_(f[12]) },
       staff: staff, asis: num_(f[COL_ASIS - 1]), terms: terms
     }
   };
