@@ -181,6 +181,7 @@ textarea{width:100%;min-height:220px;font:inherit;background:var(--field);color:
     <details id="termsBox">
       <summary>Términos del acuerdo</summary>
       <div class="terms">
+        <p class="note" id="negInfo" role="status"></p>
         <div class="row"><label for="t_reparto">Reparto de utilidad a Wapaz, %</label><input class="pct" id="t_reparto" inputmode="decimal"></div>
         <div class="row"><label for="t_alquiler">Alquiler mínimo</label><div class="money"><span>S/</span><input id="t_alquiler" inputmode="decimal"></div></div>
         <div class="row"><label for="t_servicio">Servicios</label><div class="money"><span>S/</span><input id="t_servicio" inputmode="decimal"></div></div>
@@ -190,8 +191,9 @@ textarea{width:100%;min-height:220px;font:inherit;background:var(--field);color:
         <div class="row"><label for="t_umbral">Tope para IGV reducido</label><div class="money"><span>S/</span><input id="t_umbral" inputmode="decimal"></div></div>
         <div class="row"><label for="t_igv_bajo">IGV si los ingresos son menores al tope, %</label><input class="pct" id="t_igv_bajo" inputmode="decimal"></div>
         <div class="row"><label for="t_igv_alto">IGV si llegan o pasan el tope, %</label><input class="pct" id="t_igv_alto" inputmode="decimal"></div>
-        <div class="actions"><button id="saveTerms" type="button">Guardar términos y planilla base</button><span class="status info" id="termsStatus" role="status"></span></div>
-        <p class="note">Los términos y la planilla base se guardan en tu hoja de Google, no en el código de la web. Cualquiera con el código de acceso puede cambiarlos. La planilla base se carga sola en un dispositivo nuevo.</p>
+        <div class="row"><label for="t_desde">Esta negociación rige desde<small>Al guardar se crea una hoja nueva con esta fecha; las anteriores quedan como historial.</small></label><input type="date" id="t_desde"></div>
+        <div class="actions"><button id="saveTerms" type="button">Guardar como nueva negociación</button><span class="status info" id="termsStatus" role="status"></span></div>
+        <p class="note">Cada versión de la negociación se guarda en tu hoja de Google, en una hoja "Negociación AAAA-MM-DD", no en el código de la web. Cada cuadre usa la negociación vigente a su fecha. Cualquiera con el código de acceso puede crear versiones nuevas.</p>
       </div>
     </details>
   </section>
@@ -221,6 +223,9 @@ const DEFAULT_STAFF = []; // la planilla base vive en la hoja de Google, no en e
 
 /* ===== Conexión con Google Sheets ===== */
 let CODE = '';
+let CUR_DESDE = '';      // fecha de inicio de la negociación cargada desde la hoja
+let LOADED_TERMS = null; // valores de esa negociación, para detectar cambios sin guardar
+let cfgSeq = 0;
 const hasBackend = () => !!WEB_APP_URL;
 async function api(action, params){
   const u = new URL(WEB_APP_URL);
@@ -451,6 +456,8 @@ function errMsg(e){
 }
 async function saveCuadre(){
   if(!$('fecha').value){ setStatus('saveStatus','Elige la fecha del cuadre antes de guardar.','err'); return; }
+  if(!CUR_DESDE){ setStatus('saveStatus','Primero guarda la negociación (Términos del acuerdo) para que quede en el historial.','err'); $('termsBox').open = true; return; }
+  if(termsDirty()){ setStatus('saveStatus','Cambiaste los términos. Guárdalos como nueva negociación antes de guardar el cuadre.','err'); $('termsBox').open = true; return; }
   const r = calc();
   const terms = {}; TERM_IDS.forEach(id=>terms[id]=toNum($(id).value));
   const detalle = {
@@ -464,7 +471,7 @@ async function saveCuadre(){
     igv:r.varios[0][2],alquiler:r.varios[1][2],servicio:r.varios[2][2],licor:r.varios[3][2],visa:r.varios[4][2],tpass:r.varios[5][2]};
   $('saveBtn').disabled = true; setStatus('saveStatus','Guardando…','info');
   try{
-    const res = await api('save', {d: JSON.stringify({fecha:$('fecha').value, detalle, s})});
+    const res = await api('save', {d: JSON.stringify({fecha:$('fecha').value, neg:CUR_DESDE, detalle, s})});
     if(!res.ok) throw new Error(res.error||'error');
     setStatus('saveStatus', res.nueva ? 'Cuadre guardado en Google Sheets.' : 'Ya existía un cuadre de esa fecha y se actualizó.', 'ok');
     loadHistory();
@@ -499,32 +506,56 @@ async function openCuadre(fecha){
     $('g_hielo').value = g.hielo||''; $('g_frutas').value = g.frutas||''; $('g_cortesias').value = g.cort||'';
     $('asistentes').value = d.asis||'';
     setStaff((d.staff||[]).map(x=>[x[0],x[1]]));
+    if(d.terms) TERM_IDS.forEach(id=>{ if(d.terms[id]!==undefined) $(id).value = d.terms[id]; });
+    CUR_DESDE = res.neg || ''; LOADED_TERMS = termsSnapshot();
+    showNegInfo();
     update();
-    setStatus('saveStatus','Cuadre del '+fecha+' abierto. Se calcula con los términos actuales.','ok');
+    setStatus('saveStatus','Cuadre del '+fecha+' abierto con la negociación que se usó ese día'+(res.neg?' (rige desde '+res.neg+')':'')+'.','ok');
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){ setStatus('saveStatus', errMsg(e), 'err'); }
+}
+function termsSnapshot(){ const t={}; TERM_IDS.forEach(id=>t[id]=toNum($(id).value)); return JSON.stringify(t); }
+function termsDirty(){ return LOADED_TERMS === null || LOADED_TERMS !== termsSnapshot(); }
+function showNegInfo(){
+  $('negInfo').textContent = CUR_DESDE
+    ? 'Negociación vigente para esta fecha: rige desde el ' + new Date(CUR_DESDE+'T12:00').toLocaleDateString('es-PE',{day:'numeric',month:'long',year:'numeric'}) + '.'
+    : 'Todavía no hay una negociación guardada en la hoja. Completa los términos y guárdalos como nueva negociación.';
 }
 async function saveTerms(){
   if(!termsReady()){ setStatus('termsStatus','Completa todos los campos.','err'); return; }
   if(!hasBackend()){ setStatus('termsStatus','Guardados solo en este dispositivo.','info'); persistLocal(); return; }
+  const desde = $('t_desde').value;
+  if(!desde){ setStatus('termsStatus','Elige desde qué fecha rige esta negociación.','err'); return; }
   const t = {}; TERM_IDS.forEach(id=>t[id]=toNum($(id).value));
   t.planilla = JSON.stringify(staffList().filter(x=>x[0]||x[1]).map(x=>[x[0],x[1]]));
+  t.desde = desde;
   setStatus('termsStatus','Guardando…','info');
   try{
     const res = await api('saveConfig', {d: JSON.stringify(t)});
     if(!res.ok) throw new Error(res.error||'error');
     persistLocal();
-    setStatus('termsStatus','Términos y planilla base guardados en Google Sheets.','ok');
+    const futura = desde > $('fecha').value;
+    await loadTermsFromSheet(false);
+    setStatus('termsStatus', (res.nueva ? 'Negociación nueva guardada en la hoja "Negociación '+desde+'".' : 'Ya existía una negociación con esa fecha y se actualizó.')
+      + (futura ? ' Rige desde esa fecha, así que la fecha del cuadre actual sigue usando la anterior.' : ''), 'ok');
   }catch(e){ setStatus('termsStatus', errMsg(e), 'err'); }
 }
-async function loadTermsFromSheet(){
+// Carga la negociación vigente a la fecha elegida. conPlanilla: carga también la planilla base si no hay una escrita.
+async function loadTermsFromSheet(conPlanilla){
+  const seq = ++cfgSeq;
   try{
-    const res = await api('config');
-    if(res.ok && res.terms){
-      TERM_IDS.forEach(id=>{ if(res.terms[id] !== undefined && res.terms[id] !== '') $(id).value = res.terms[id]; });
-      if(res.terms.planilla){
-        try{ const base = JSON.parse(res.terms.planilla); if(Array.isArray(base) && !staffList().some(x=>x[0]||x[1])) setStaff(base); }catch(e){}
-      }
+    const res = await api('config', {fecha: $('fecha').value});
+    if(seq !== cfgSeq) return;
+    if(res.ok){
+      const tm = res.terms || {};
+      if(res.desde){
+        TERM_IDS.forEach(id=>{ if(tm[id] !== undefined && tm[id] !== '') $(id).value = tm[id]; });
+        if(conPlanilla !== false && tm.planilla){
+          try{ const base = JSON.parse(tm.planilla); if(Array.isArray(base) && !staffList().some(x=>x[0]||x[1])) setStaff(base); }catch(e){}
+        }
+        CUR_DESDE = res.desde; LOADED_TERMS = termsSnapshot();
+      } else { CUR_DESDE = ''; LOADED_TERMS = null; }
+      showNegInfo();
       update();
     }
   }catch(e){}
@@ -533,7 +564,7 @@ async function loadTermsFromSheet(){
 /* ===== Acceso ===== */
 async function startSession(){
   $('gate').hidden = true;
-  await loadTermsFromSheet();
+  await loadTermsFromSheet(true);
   loadHistory();
 }
 async function tryCode(code){
@@ -555,7 +586,8 @@ $('gateForm').addEventListener('submit', async e=>{
 
 /* ===== Eventos y arranque ===== */
 document.querySelectorAll('.wrap input').forEach(i=>{ if(!i.closest('.srow') && i.id!=='fecha') i.addEventListener('input',update); });
-$('fecha').addEventListener('input', scheduleImage);
+let fechaTimer = null;
+$('fecha').addEventListener('input', ()=>{ scheduleImage(); clearTimeout(fechaTimer); fechaTimer = setTimeout(()=>{ if(CODE && $('fecha').value) loadTermsFromSheet(false); }, 400); });
 $('addStaff').addEventListener('click',()=>{ addStaffRow('',''); update(); const rows=$('staff').querySelectorAll('.srow'); rows[rows.length-1].querySelector('input').focus(); });
 $('saveBtn').addEventListener('click', saveCuadre);
 $('saveTerms').addEventListener('click', saveTerms);
@@ -577,6 +609,7 @@ $('clear').addEventListener('click',()=>{
   setStaff(Array.isArray(ss) && ss.length ? ss : DEFAULT_STAFF);
   const d = new Date(); d.setDate(d.getDate()+((5-d.getDay()+7)%7));
   $('fecha').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  $('t_desde').value = $('fecha').value;
   render();
   if(document.fonts && document.fonts.load){ document.fonts.load('700 20px Archivo').then(scheduleImage, ()=>{}); }
   if(!hasBackend()){ $('bannerSetup').hidden = false; return; }
