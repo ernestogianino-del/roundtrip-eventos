@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Round Trip Eventos</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#0b0b0f;color:#fff}
+    .wrap{max-width:980px;margin:0 auto;padding:32px}
+    .card{background:#141422;border:1px solid #2a2a40;border-radius:16px;padding:24px}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    @media(max-width:820px){.grid{grid-template-columns:1fr}}
+    h1{font-size:38px;margin:0 0 10px}
+    p{opacity:.9;line-height:1.4;margin:0 0 10px}
+    input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid #2a2a40;background:#0f0f18;color:#fff;box-sizing:border-box}
+    label{display:block;margin-bottom:12px;font-size:14px;opacity:.8}
+    button{background:#7c3aed;border:0;font-weight:700;cursor:pointer;margin-top:14px}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .small{font-size:12px;opacity:.75;margin:0 0 6px}
+    .ok{margin-top:10px;color:#7CFFB2}
+    .err{margin-top:10px;color:#ff7c7c}
+    .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#1f1f33;border:1px solid #2a2a40;margin-bottom:10px}
+    .honeypot{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+    .evento-nombre{font-size:15px;font-weight:700;color:#7c3aed;margin:0 0 4px}
+    .evento-fecha{font-size:13px;opacity:.7;margin:0 0 14px}
+    .flyer-wrap{margin:14px 0 0;border-radius:12px;overflow:hidden;border:1px solid #2a2a40}
+    .flyer-wrap img{width:100%;display:block;border-radius:12px}
+    .flyer-placeholder{background:#1a1a2e;border:2px dashed #2a2a40;border-radius:12px;padding:40px 20px;text-align:center;opacity:.5;font-size:13px;margin-top:14px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge">ROUND TRIP &bull; Lista de Invitados</div>
+  <script>
+  const EVENTO = {
+    nombre:   "Round Trip - Noche de Estreno",
+    fecha:    "Sabado 14 de Marzo, 2026",
+    lugar:    "Lima, Peru",
+    flyerUrl: "https://i.postimg.cc/4NcYndF5/Sin-ti-tulo-2-jpg.jpg"
+  };
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoSIT_YBwtRqPQwONaayUY-HWNStpjy5F5UvApthYFaMPsc3OPRi_5A8Gn00gpZJdJ/exec";
+  const SHEET_ID = "1pO_ounSYZhIPxQX4cLqergLVO5xNYdQXvjiK6EkDmus";
+  </script>
+  <div class="grid">
+    <div class="card">
+      <div id="evento-info"></div>
+      <h1>Anota tu nombre</h1>
+      <p>Registrate con tu promotor para entrar a la lista. Recibiras confirmacion por WhatsApp.</p>
+      <p class="small">* No spam. Puedes salirte cuando quieras.</p>
+      <div id="flyer-area"></div>
+    </div>
+    <div class="card">
+      <form id="leadForm" autocomplete="on">
+        <label class="honeypot">
+          No llenar
+          <input type="text" name="bot_trap" tabindex="-1" autocomplete="off" />
+        </label>
+        <label>Nombre
+          <input name="nombre" id="nombre" required placeholder="Tu nombre completo" />
+        </label>
+        <label>WhatsApp
+          <input name="whatsapp" id="whatsappInput" required placeholder="+51 999 999 999" inputmode="tel" />
+        </label>
+        <label>Correo (opcional)
+          <input name="email" type="email" placeholder="tucorreo@gmail.com" />
+        </label>
+        <label>Con que promotor vas?
+          <select name="promotor" id="promotorSelect" required>
+            <option value="">Cargando promotores...</option>
+          </select>
+        </label>
+        <button type="submit" id="btn">Quiero entrar a la lista</button>
+        <div id="msg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+var params = new URLSearchParams(window.location.search);
+var PROMOTOR_URL = params.get("promotor") || "";
+document.getElementById("evento-info").innerHTML =
+  '<p class="evento-nombre">' + EVENTO.nombre + '</p>' +
+  '<p class="evento-fecha">' + EVENTO.fecha + ' - ' + EVENTO.lugar + '</p>';
+var flyerArea = document.getElementById("flyer-area");
+if (EVENTO.flyerUrl) {
+  flyerArea.innerHTML = '<div class="flyer-wrap"><img src="' + EVENTO.flyerUrl + '" alt="Flyer" /></div>';
+} else {
+  flyerArea.innerHTML = '<div class="flyer-placeholder">Flyer proximamente</div>';
+}
+var promotorSelect = document.getElementById("promotorSelect");
+function loadPromotores() {
+  fetch("https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Promotores&range=A2:F200")
+    .then(function(r){ return r.text(); })
+    .then(function(txt){
+      var json = JSON.parse(txt.replace(/^[^\{]+/,"").replace(/[^\}]+$/,""));
+      var rows = json.table.rows || [];
+      promotorSelect.innerHTML = '<option value="">Elige tu promotor</option>';
+      rows.forEach(function(row){
+        var nombre = row.c&&row.c[0]&&row.c[0].v ? String(row.c[0].v) : "";
+        var activo = row.c&&row.c[3]&&row.c[3].v ? String(row.c[3].v) : "";
+        if (!nombre || activo.toUpperCase() !== "SI") return;
+        var opt = document.createElement("option");
+        opt.value = nombre; opt.textContent = nombre;
+        promotorSelect.appendChild(opt);
+      });
+      if (PROMOTOR_URL) promotorSelect.value = PROMOTOR_URL;
+    })
+    .catch(function(){ promotorSelect.innerHTML = '<option value="">Error al cargar</option>'; });
+}
+loadPromotores();
+var form = document.getElementById("leadForm");
+var btn  = document.getElementById("btn");
+var msg  = document.getElementById("msg");
+var wai  = document.getElementById("whatsappInput");
+function normalizeWA(v) {
+  if (!v) return "";
+  v = String(v).trim().replace(/[^\d+]/g,"");
+  if (/^51\d{9}$/.test(v)) v = "+" + v;
+  if (!v.startsWith("+") && /^\d{9}$/.test(v)) v = "+51" + v;
+  return v;
+}
+function sendData(payload, attempt) {
+  attempt = attempt || 1;
+  var qs = new URLSearchParams({
+    submit:"1",
+    nombre: payload.nombre,
+    whatsapp: payload.whatsapp,
+    email: payload.email,
+    promotor: payload.promotor,
+    evento: payload.evento,
+    timestamp: payload.timestamp,
+    source: "landing"
+  }).toString();
+  var url = WEB_APP_URL + "?" + qs;
+  var img = new Image();
+  img.onload = img.onerror = function() {
+    msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
+    btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
+    form.reset(); loadPromotores();
+  };
+  img.src = url;
+  setTimeout(function() {
+    if (btn.disabled) {
+      msg.innerHTML = '<div class="ok">Listo! Estas en la lista. Te escribiremos pronto.</div>';
+      btn.disabled = false; btn.textContent = "Quiero entrar a la lista";
+      form.reset(); loadPromotores();
+    }
+  }, 8000);
+}
+form.addEventListener("submit", function(e) {
+  e.preventDefault();
+  msg.innerHTML = "";
+  var trap = form.querySelector('input[name="bot_trap"]');
+  if (trap && trap.value.trim()) return;
+  btn.disabled = true; btn.textContent = "Anotando...";
+  wai.value = normalizeWA(wai.value);
+  var fd = new FormData(form);
+  sendData({
+    nombre:   (fd.get("nombre")   ||"").toString().trim(),
+    whatsapp: (fd.get("whatsapp") ||"").toString().trim(),
+    email:    (fd.get("email")    ||"").toString().trim(),
+    promotor: (fd.get("promotor") ||"").toString().trim() || PROMOTOR_URL,
+    evento:   EVENTO.nombre,
+    timestamp: new Date().toISOString()
+  });
+});
+</script>
+</body>
+</html>
