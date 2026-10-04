@@ -1,8 +1,11 @@
 /**
  * Cuadre Wapaz - receptor en Google Sheets
  *
+ * Escribe SOLO en la pestana "cuadre web" de la hoja donde se instala. Si la pestana no
+ * existe, la crea. Nunca borra ni modifica las otras pestanas de la hoja.
+ *
  * INSTALACION (una sola vez)
- * 1. Crea una hoja de Google nueva (por ejemplo "Cuadre Wapaz").
+ * 1. Abre tu hoja "Proyeccion Viernes - Wapaz" en Google Sheets.
  * 2. Menu Extensiones > Apps Script. Borra lo que haya y pega todo este archivo.
  * 3. En Apps Script: Configuracion del proyecto (icono de engranaje) > Propiedades de
  *    la secuencia de comandos > Agregar propiedad:
@@ -18,14 +21,20 @@
  *
  * Si cambias este archivo despues, hay que crear una NUEVA VERSION de la implementacion
  * (Implementar > Administrar implementaciones > editar > Nueva version) para que se aplique.
+ *
+ * DISENO DE LA PESTANA "cuadre web"
+ *   Columnas A a L: un cuadre por fila (la fecha es la clave; guardar de nuevo la misma
+ *   fecha actualiza su fila).
+ *   Columnas N y O: terminos del acuerdo y planilla base (los usa la pagina).
  */
 
-var HOJA_CUADRES = 'Cuadres';
-var HOJA_TERMINOS = 'Términos';
+var HOJA = 'cuadre web';
 var ENCABEZADOS = ['Fecha', 'Ingresos', 'Planilla y gastos', 'Varios', 'Total gastos',
   'Utilidad', 'Wapaz', 'Titanium', 'Asistentes', 'Ticket promedio', 'Guardado', 'Detalle'];
 var COL_FECHA = 1;
 var COL_DETALLE = 12;
+var COL_CLAVE = 14;   // N
+var COL_VALOR = 15;   // O
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
@@ -67,12 +76,14 @@ function salida_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function hojaCuadres_() {
+// Devuelve la pestana "cuadre web". La crea si no existe y le pone encabezados si esta vacia.
+function hoja_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(HOJA_CUADRES);
-  if (!sh) {
-    sh = ss.insertSheet(HOJA_CUADRES);
+  var sh = ss.getSheetByName(HOJA);
+  if (!sh) sh = ss.insertSheet(HOJA);
+  if (sh.getRange(1, 1).getValue() === '') {
     sh.getRange(1, 1, 1, ENCABEZADOS.length).setValues([ENCABEZADOS]).setFontWeight('bold');
+    sh.getRange(1, COL_CLAVE, 1, 2).setValues([['Clave', 'Valor']]).setFontWeight('bold');
     sh.setFrozenRows(1);
     sh.getRange(1, COL_FECHA, sh.getMaxRows(), 1).setNumberFormat('@');
     sh.getRange(1, COL_DETALLE, sh.getMaxRows(), 1).setNumberFormat('@');
@@ -81,15 +92,13 @@ function hojaCuadres_() {
   return sh;
 }
 
-function hojaTerminos_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(HOJA_TERMINOS);
-  if (!sh) {
-    sh = ss.insertSheet(HOJA_TERMINOS);
-    sh.getRange(1, 1, 1, 2).setValues([['Clave', 'Valor']]).setFontWeight('bold');
-    sh.setFrozenRows(1);
+// Ultima fila con contenido en UNA columna (getLastRow() cuenta tambien las columnas N y O).
+function ultimaFila_(sh, col) {
+  var v = sh.getRange(1, col, sh.getMaxRows(), 1).getValues();
+  for (var i = v.length - 1; i >= 0; i--) {
+    if (v[i][0] !== '') return i + 1;
   }
-  return sh;
+  return 0;
 }
 
 function num_(v) {
@@ -98,11 +107,11 @@ function num_(v) {
 }
 
 function leerTerminos_() {
-  var sh = hojaTerminos_();
-  var n = sh.getLastRow() - 1;
+  var sh = hoja_();
+  var n = ultimaFila_(sh, COL_CLAVE) - 1;
   var out = {};
   if (n < 1) return out;
-  var vals = sh.getRange(2, 1, n, 2).getValues();
+  var vals = sh.getRange(2, COL_CLAVE, n, 2).getValues();
   for (var i = 0; i < vals.length; i++) {
     if (vals[i][0] !== '') out[String(vals[i][0])] = vals[i][1];
   }
@@ -110,7 +119,7 @@ function leerTerminos_() {
 }
 
 function guardarTerminos_(obj) {
-  var sh = hojaTerminos_();
+  var sh = hoja_();
   var filas = [];
   Object.keys(obj).forEach(function (k) {
     if (/^t_[a-z_]+$/.test(k)) filas.push([k, num_(obj[k])]);
@@ -119,12 +128,13 @@ function guardarTerminos_(obj) {
   if (typeof obj.planilla === 'string' && obj.planilla.length <= 4000) {
     filas.push(['planilla', obj.planilla]);
   }
-  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 2).clearContent();
-  if (filas.length) sh.getRange(2, 1, filas.length, 2).setValues(filas);
+  var ultima = ultimaFila_(sh, COL_CLAVE);
+  if (ultima > 1) sh.getRange(2, COL_CLAVE, ultima - 1, 2).clearContent();
+  if (filas.length) sh.getRange(2, COL_CLAVE, filas.length, 2).setValues(filas);
 }
 
 function buscarFila_(sh, fecha) {
-  var n = sh.getLastRow() - 1;
+  var n = ultimaFila_(sh, COL_FECHA) - 1;
   if (n < 1) return -1;
   var fechas = sh.getRange(2, COL_FECHA, n, 1).getValues();
   for (var i = 0; i < fechas.length; i++) {
@@ -142,10 +152,10 @@ function guardarCuadre_(d) {
   var fila = [fecha, num_(s.venta), num_(s.planilla), num_(s.varios), num_(s.gastos),
     num_(s.util), num_(s.pago), num_(s.casa), num_(s.asis), num_(s.ticket),
     new Date(), detalle];
-  var sh = hojaCuadres_();
+  var sh = hoja_();
   var r = buscarFila_(sh, fecha);
   var nueva = r === -1;
-  if (nueva) r = Math.max(sh.getLastRow(), 1) + 1;
+  if (nueva) r = Math.max(ultimaFila_(sh, COL_FECHA), 1) + 1;
   sh.getRange(r, COL_FECHA).setNumberFormat('@');
   sh.getRange(r, COL_DETALLE).setNumberFormat('@');
   sh.getRange(r, 1, 1, fila.length).setValues([fila]);
@@ -155,8 +165,8 @@ function guardarCuadre_(d) {
 }
 
 function listarCuadres_(max) {
-  var sh = hojaCuadres_();
-  var n = sh.getLastRow() - 1;
+  var sh = hoja_();
+  var n = ultimaFila_(sh, COL_FECHA) - 1;
   if (n < 1) return [];
   var vals = sh.getRange(2, 1, n, 11).getValues();
   var items = vals.map(function (v) {
@@ -171,7 +181,7 @@ function listarCuadres_(max) {
 }
 
 function obtenerCuadre_(fecha) {
-  var sh = hojaCuadres_();
+  var sh = hoja_();
   var r = buscarFila_(sh, fecha);
   if (r === -1) return { ok: false, error: 'no_existe' };
   var txt = sh.getRange(r, COL_DETALLE).getValue();
