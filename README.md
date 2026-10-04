@@ -4,7 +4,7 @@ Sitio de Sisifuz / Round Trip Eventos (GitHub Pages, dominio `www.roundtrip-even
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` | Página principal de Sisifuz. |
+| `index.html` | Página principal: presentación del sistema Round Trip (invitaciones con QR, eventos, pasarela de pagos, control de promotores y artistas). |
 | `cuadre-wapaz.html` | Cuadre de la co-producción Wapaz. Pide un código de acceso y guarda en Google Sheets. No está enlazada desde la página principal y lleva `noindex`. |
 | `lista.html` | Lista de invitados de Round Trip (antes era `index.html`). Los links con `?promotor=` de la página principal redirigen aquí. |
 | `apps-script/cuadre-wapaz.gs` | Script de Google que recibe el cuadre. Las instrucciones de instalación están al inicio del archivo. |
