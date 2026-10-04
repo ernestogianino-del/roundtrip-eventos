@@ -5,6 +5,8 @@
  *
  *  1) "cuadre web": una fila por noche, cada ingreso y gasto en su columna.
  *     La fila 2 es de TOTALES (suma automatica de cada columna) y los cuadres empiezan en la fila 3.
+ *     El detalle de la planilla de cada noche (persona por persona) queda como NOTA en la celda
+ *     "Planilla staff" de esa fila (pasa el mouse por la celda para verlo).
  *
  *  2) "Negociacion AAAA-MM-DD": una hoja por cada version de la negociacion. La fecha del nombre es
  *     la fecha desde la que rige. Cuando la negociacion cambia, la pagina crea una hoja nueva y las
@@ -33,13 +35,13 @@ var PREFIJO_NEG = 'Negociación ';
 var ENCABEZADOS = ['Fecha', 'Sistema', 'Efectivo Titanium', 'Taquilla efectivo/Yape', 'Taquilla POS',
   'Passline', 'Ingresos', 'Planilla staff', 'Hielo', 'Frutas', 'Cortesias', 'IGV', 'Alquiler',
   'Servicios', 'Costo licor', 'Visa', 'Comision Passline', 'Total gastos', 'Utilidad', 'Wapaz',
-  'Titanium', 'Asistentes', 'Ticket promedio', 'Negociacion', 'Guardado', 'Detalle'];
+  'Titanium', 'Asistentes', 'Ticket promedio', 'Negociacion', 'Guardado'];
 var COL_FECHA = 1;
 var COL_ASIS = 22;
 var COL_TICKET = 23;
 var COL_NEG = 24;
 var COL_GUARDADO = 25;
-var COL_DETALLE = 26;
+var COL_PLANILLA = 8;
 var FILA_TOTALES = 2;
 var FILA_DATOS = 3;
 
@@ -107,11 +109,10 @@ function hoja_() {
     sh.getRange(FILA_TOTALES, 1, 1, totales.length).setFormulas([totales]).setFontWeight('bold');
     sh.setFrozenRows(FILA_TOTALES);
     sh.getRange(1, COL_FECHA, sh.getMaxRows(), 1).setNumberFormat('@');
-    sh.getRange(1, COL_DETALLE, sh.getMaxRows(), 1).setNumberFormat('@');
     sh.getRange(FILA_TOTALES, 2, sh.getMaxRows() - 1, 21).setNumberFormat('#,##0.00');
     sh.getRange(FILA_TOTALES, COL_ASIS, sh.getMaxRows() - 1, 1).setNumberFormat('0');
     sh.getRange(FILA_TOTALES, COL_TICKET, sh.getMaxRows() - 1, 1).setNumberFormat('#,##0.00');
-  } else if (sh.getRange(1, COL_DETALLE).getValue() !== 'Detalle') {
+  } else if (sh.getRange(1, COL_GUARDADO).getValue() !== 'Guardado' || sh.getRange(1, COL_GUARDADO + 1).getValue() !== '') {
     throw new Error('hoja_formato');
   }
   return sh;
@@ -152,23 +153,28 @@ function guardarCuadre_(d) {
   var neg = String(d.neg || '');
   if (!fechaValida_(neg)) return { ok: false, error: 'sin_negociacion' };
   var s = d.s || {};
-  var detalle = JSON.stringify(d.detalle || {});
-  if (detalle.length > 40000) return { ok: false, error: 'detalle_grande' };
+  var staff = (d.detalle && d.detalle.staff) || [];
+  if (staff.length > 80) return { ok: false, error: 'detalle_grande' };
+  var nota = 'Planilla del ' + fecha;
+  staff.forEach(function (x) {
+    var nombre = String(x[0] || 'Sin nombre').replace(/[\r\n|]+/g, ' ').replace(/ +/g, ' ').trim();
+    nota += '\n' + nombre + ' | ' + num_(x[1]).toFixed(2);
+  });
   var v = (d.detalle && d.detalle.v) || {};
   var g = (d.detalle && d.detalle.g) || {};
   var fila = [fecha, num_(v.sistema), num_(v.efectivo), num_(v.taqEf), num_(v.taqPos), num_(v.passline),
     num_(s.venta), num_(s.staff), num_(g.hielo), num_(g.frutas), num_(g.cort),
     num_(s.igv), num_(s.alquiler), num_(s.servicio), num_(s.licor), num_(s.visa), num_(s.tpass),
     num_(s.gastos), num_(s.util), num_(s.pago), num_(s.casa), num_(s.asis), num_(s.ticket),
-    neg, new Date(), detalle];
+    neg, new Date()];
   var sh = hoja_();
   var r = buscarFila_(sh, fecha);
   var nueva = r === -1;
   if (nueva) r = Math.max(ultimaFila_(sh, COL_FECHA), FILA_TOTALES) + 1;
   sh.getRange(r, COL_FECHA).setNumberFormat('@');
   sh.getRange(r, COL_NEG).setNumberFormat('@');
-  sh.getRange(r, COL_DETALLE).setNumberFormat('@');
   sh.getRange(r, 1, 1, fila.length).setValues([fila]);
+  sh.getRange(r, COL_PLANILLA).setNote(nota);
   sh.getRange(r, 2, 1, 21).setNumberFormat('#,##0.00');
   sh.getRange(r, COL_ASIS).setNumberFormat('0');
   sh.getRange(r, COL_TICKET).setNumberFormat('#,##0.00');
@@ -196,9 +202,24 @@ function obtenerCuadre_(fecha) {
   var sh = hoja_();
   var r = buscarFila_(sh, fecha);
   if (r === -1) return { ok: false, error: 'no_existe' };
-  var txt = sh.getRange(r, COL_DETALLE).getValue();
-  var neg = String(sh.getRange(r, COL_NEG).getValue() || '');
-  return { ok: true, detalle: JSON.parse(String(txt || '{}')), neg: neg };
+  var f = sh.getRange(r, 1, 1, COL_GUARDADO).getValues()[0];
+  var neg = String(f[COL_NEG - 1] || '');
+  var staff = [];
+  String(sh.getRange(r, COL_PLANILLA).getNote() || '').split('\n').slice(1).forEach(function (linea) {
+    var k = linea.lastIndexOf(' | ');
+    if (k > -1) staff.push([linea.substring(0, k), num_(linea.substring(k + 3))]);
+  });
+  var cfg = neg ? leerConfig_(neg) : { terms: {} };
+  var terms = {};
+  Object.keys(cfg.terms || {}).forEach(function (k) { if (/^t_/.test(k)) terms[k] = cfg.terms[k]; });
+  return {
+    ok: true, neg: neg,
+    detalle: {
+      v: { sistema: num_(f[1]), efectivo: num_(f[2]), taqEf: num_(f[3]), taqPos: num_(f[4]), passline: num_(f[5]) },
+      g: { hielo: num_(f[8]), frutas: num_(f[9]), cort: num_(f[10]) },
+      staff: staff, asis: num_(f[COL_ASIS - 1]), terms: terms
+    }
+  };
 }
 
 // ---------------------------------------------------------------- hojas "Negociación AAAA-MM-DD"
