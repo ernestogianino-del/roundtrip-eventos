@@ -23,18 +23,20 @@
  * (Implementar > Administrar implementaciones > editar > Nueva version) para que se aplique.
  *
  * DISENO DE LA PESTANA "cuadre web"
- *   Columnas A a L: un cuadre por fila (la fecha es la clave; guardar de nuevo la misma
+ *   Columnas A a Y: un cuadre por fila, cada ingreso y gasto en su columna (la fecha es la clave; guardar de nuevo la misma
  *   fecha actualiza su fila).
- *   Columnas N y O: terminos del acuerdo y planilla base (los usa la pagina).
+ *   Columnas AA y AB: terminos del acuerdo y planilla base (los usa la pagina).
  */
 
 var HOJA = 'cuadre web';
-var ENCABEZADOS = ['Fecha', 'Ingresos', 'Planilla y gastos', 'Varios', 'Total gastos',
-  'Utilidad', 'Wapaz', 'Titanium', 'Asistentes', 'Ticket promedio', 'Guardado', 'Detalle'];
+var ENCABEZADOS = ['Fecha', 'Sistema', 'Efectivo Titanium', 'Taquilla efectivo/Yape', 'Taquilla POS',
+  'Passline', 'Ingresos', 'Planilla staff', 'Hielo', 'Frutas', 'Cortesias', 'IGV', 'Alquiler',
+  'Servicios', 'Costo licor', 'Visa', 'Comision Passline', 'Total gastos', 'Utilidad', 'Wapaz',
+  'Titanium', 'Asistentes', 'Ticket promedio', 'Guardado', 'Detalle'];
 var COL_FECHA = 1;
-var COL_DETALLE = 12;
-var COL_CLAVE = 14;   // N
-var COL_VALOR = 15;   // O
+var COL_DETALLE = 25;
+var COL_CLAVE = 27;   // AA
+var COL_VALOR = 28;   // AB
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
@@ -87,7 +89,8 @@ function hoja_() {
     sh.setFrozenRows(1);
     sh.getRange(1, COL_FECHA, sh.getMaxRows(), 1).setNumberFormat('@');
     sh.getRange(1, COL_DETALLE, sh.getMaxRows(), 1).setNumberFormat('@');
-    sh.getRange(2, 2, sh.getMaxRows() - 1, 7).setNumberFormat('#,##0.00');
+    sh.getRange(2, 2, sh.getMaxRows() - 1, 20).setNumberFormat('#,##0.00');
+    sh.getRange(2, 23, sh.getMaxRows() - 1, 1).setNumberFormat('#,##0.00');
   }
   return sh;
 }
@@ -149,8 +152,12 @@ function guardarCuadre_(d) {
   var s = d.s || {};
   var detalle = JSON.stringify(d.detalle || {});
   if (detalle.length > 40000) return { ok: false, error: 'detalle_grande' };
-  var fila = [fecha, num_(s.venta), num_(s.planilla), num_(s.varios), num_(s.gastos),
-    num_(s.util), num_(s.pago), num_(s.casa), num_(s.asis), num_(s.ticket),
+  var v = (d.detalle && d.detalle.v) || {};
+  var g = (d.detalle && d.detalle.g) || {};
+  var fila = [fecha, num_(v.sistema), num_(v.efectivo), num_(v.taqEf), num_(v.taqPos), num_(v.passline),
+    num_(s.venta), num_(s.staff), num_(g.hielo), num_(g.frutas), num_(g.cort),
+    num_(s.igv), num_(s.alquiler), num_(s.servicio), num_(s.licor), num_(s.visa), num_(s.tpass),
+    num_(s.gastos), num_(s.util), num_(s.pago), num_(s.casa), num_(s.asis), num_(s.ticket),
     new Date(), detalle];
   var sh = hoja_();
   var r = buscarFila_(sh, fecha);
@@ -159,8 +166,9 @@ function guardarCuadre_(d) {
   sh.getRange(r, COL_FECHA).setNumberFormat('@');
   sh.getRange(r, COL_DETALLE).setNumberFormat('@');
   sh.getRange(r, 1, 1, fila.length).setValues([fila]);
-  sh.getRange(r, 2, 1, 7).setNumberFormat('#,##0.00');
-  sh.getRange(r, 11).setNumberFormat('dd/mm/yyyy hh:mm');
+  sh.getRange(r, 2, 1, 20).setNumberFormat('#,##0.00');
+  sh.getRange(r, 23).setNumberFormat('#,##0.00');
+  sh.getRange(r, 24).setNumberFormat('dd/mm/yyyy hh:mm');
   return { ok: true, nueva: nueva, fila: r };
 }
 
@@ -168,11 +176,11 @@ function listarCuadres_(max) {
   var sh = hoja_();
   var n = ultimaFila_(sh, COL_FECHA) - 1;
   if (n < 1) return [];
-  var vals = sh.getRange(2, 1, n, 11).getValues();
+  var vals = sh.getRange(2, 1, n, 24).getValues();
   var items = vals.map(function (v) {
-    var g = v[10];
+    var g = v[23];
     return {
-      fecha: String(v[0]), venta: num_(v[1]), util: num_(v[5]), pago: num_(v[6]),
+      fecha: String(v[0]), venta: num_(v[6]), util: num_(v[18]), pago: num_(v[19]),
       guardado: g instanceof Date ? g.toISOString() : String(g)
     };
   });

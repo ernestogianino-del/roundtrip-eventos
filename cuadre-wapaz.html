@@ -459,7 +459,9 @@ async function saveCuadre(){
     g:{hielo:r.hielo,frutas:r.frutas,cort:r.cort},
     asis:r.asis, terms
   };
-  const s = {venta:r.venta,planilla:r.planilla,varios:r.variosTot,gastos:r.gastos,util:r.util,pago:r.pago,casa:r.casa,asis:r.asis,ticket:r.ticket};
+  const s = {venta:r.venta,planilla:r.planilla,varios:r.variosTot,gastos:r.gastos,util:r.util,pago:r.pago,casa:r.casa,asis:r.asis,ticket:r.ticket,
+    staff:r.planilla-r.hielo-r.frutas-r.cort,
+    igv:r.varios[0][2],alquiler:r.varios[1][2],servicio:r.varios[2][2],licor:r.varios[3][2],visa:r.varios[4][2],tpass:r.varios[5][2]};
   $('saveBtn').disabled = true; setStatus('saveStatus','Guardando…','info');
   try{
     const res = await api('save', {d: JSON.stringify({fecha:$('fecha').value, detalle, s})});
