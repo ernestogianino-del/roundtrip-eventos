@@ -67,12 +67,19 @@ textarea{min-height:70px;resize:vertical}
   </div>
   <div id="banner" class="banner" hidden></div>
 
+  <section id="gate" hidden>
+    <h2>Acceso</h2>
+    <div class="fld"><label for="gate-code">Código de acceso</label><input id="gate-code" type="password" autocomplete="off" autocapitalize="off"></div>
+    <div><button class="btn primary" id="gate-go">Entrar</button></div>
+    <div class="msg" id="gate-msg" role="status"></div>
+  </section>
+
+  <div id="app" class="wrap" style="padding:0;gap:16px" hidden>
   <section>
-    <h2>Fecha y acceso</h2>
+    <h2>Fecha</h2>
     <div class="grid">
       <div class="fld"><label for="fecha">Fecha del evento</label><input id="fecha" type="date"></div>
       <div class="fld"><label for="resp">Quién llena</label><input id="resp" type="text" autocomplete="name"></div>
-      <div class="fld"><label for="codigo">Código de acceso</label><input id="codigo" type="password" autocomplete="off"></div>
     </div>
   </section>
 
@@ -147,6 +154,7 @@ textarea{min-height:70px;resize:vertical}
     <h2>Observaciones</h2>
     <textarea id="obs" placeholder="Errores del sistema, faltantes, algo que Luis deba saber"></textarea>
   </section>
+  </div>
 </div>
 
 <div class="bar">
@@ -276,12 +284,12 @@ function clearNums(){
   S.otros=[];S.hielo=S.frutas=S.barraTaq=S.cprom=S.cluis=S.cnery=S.obs=""
 }
 (function load(){var d=store.get("cuadre-"+SLUG+"-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(S.fecha!==f){S.fecha=f;clearNums()}}
-  var c=store.get("cuadre-"+SLUG+"-codigo");if(c)$("codigo").value=c})();
+})();
 
 [["fecha","fecha"],["resp","resp"],["hielo","hielo"],["frutas","frutas"],["barraTaq","barraTaq"],["c-prom","cprom"],["c-luis","cluis"],["c-nery","cnery"],["obs","obs"]].forEach(function(p){
   $(p[0]).addEventListener("input",function(){S[p[1]]=$(p[0]).value;draft()});
 });
-$("codigo").addEventListener("input",function(){store.set("cuadre-"+SLUG+"-codigo",$("codigo").value)});
+
 document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-add");S[k].push({});renderRows(k)})});
 
 function renderPhotos(){
@@ -314,7 +322,7 @@ $("b-send").addEventListener("click",async function(){
   var btn=$("b-send");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(S.fecha||"")){setMsg("Elige la fecha.","bad");return}
   if(!WEB_APP_URL){setMsg("El envío todavía no está activado. Copia el resumen y mándalo por WhatsApp.","bad");return}
-  var code=$("codigo").value;if(!code){setMsg("Escribe el código de acceso.","bad");return}
+  var code=CODE;if(!code){setMsg("Vuelve a entrar con el código de acceso.","bad");return}
   btn.disabled=true;setMsg("Enviando datos…");
   try{
     await post({action:"save",code:code,fecha:S.fecha,data:S,resumen:summary(S)});
@@ -330,9 +338,34 @@ $("b-send").addEventListener("click",async function(){
   btn.disabled=false;
 });
 
-if(!BRAND){var b0=$("banner");b0.hidden=false;b0.textContent="Este link no es válido. Pídele a Luis el link de tu marca.";document.querySelectorAll("section,.bar").forEach(function(n){n.hidden=true})}
-else{$("h1").textContent="Cuadre "+BRAND.n;document.title="Cuadre "+BRAND.n}
-if(BRAND&&!WEB_APP_URL){var b=$("banner");b.hidden=false;b.textContent="Envío no activado todavía: puedes llenar el cuadre y copiar el resumen."}
+var CODE="";
+function unlock(code){CODE=code;$("gate").hidden=true;$("app").hidden=false;document.querySelector(".bar").hidden=false}
+async function check(code){
+  var u=new URL(WEB_APP_URL);u.searchParams.set("m",SLUG);u.searchParams.set("code",code);
+  var r=await fetch(u.toString());var j=await r.json();
+  if(!j.ok)throw new Error(j.error==="codigo"?"Código incorrecto":(j.error||"Error del servidor"));
+  return j;
+}
+if(!BRAND){var b0=$("banner");b0.hidden=false;b0.textContent="Este link no es válido. Pídele a Luis el link de tu marca.";document.querySelector(".bar").hidden=true}
+else{
+  $("h1").textContent="Cuadre "+BRAND.n;document.title="Cuadre "+BRAND.n;
+  document.querySelector(".bar").hidden=true;
+  if(!WEB_APP_URL){var b=$("banner");b.hidden=false;b.textContent="Envío no activado todavía.";unlock("")}
+  else{
+    $("gate").hidden=false;
+    var saved=store.get("cuadre-"+SLUG+"-codigo");
+    var go=async function(code,silent){
+      if(!code){return}
+      $("gate-go").disabled=true;if(!silent)$("gate-msg").textContent="Verificando…";
+      try{await check(code);store.set("cuadre-"+SLUG+"-codigo",code);unlock(code)}
+      catch(e){if(!silent)$("gate-msg").textContent=(e&&e.message)||"No se pudo verificar";else store.set("cuadre-"+SLUG+"-codigo",null)}
+      $("gate-go").disabled=false;
+    };
+    $("gate-go").addEventListener("click",function(){go($("gate-code").value.trim(),false)});
+    $("gate-code").addEventListener("keydown",function(e){if(e.key==="Enter")go($("gate-code").value.trim(),false)});
+    if(saved)go(saved,true);
+  }
+}
 renderAll();
 })();
 </script>
