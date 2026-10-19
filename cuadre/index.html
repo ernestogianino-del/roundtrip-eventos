@@ -243,8 +243,7 @@ function totals(){
   $("b-caja").textContent=fmt(t.cajas);$("b-plan").textContent=fmt(t.planS+t.planL);
   var c=$("c-cajas");c.textContent="";
   if(t.cont>0)c.appendChild(ctl("Cajas vs contómetro",t.cajas,t.cont));
-  if(t.coverT>0||t.cajaCover>0)c.appendChild(ctl("Taquilla vs caja COVER",t.coverT,t.cajaCover));
-  if(t.totemT>0||t.cajaTotem>0)c.appendChild(ctl("Totem vs caja TOTEM",t.totemT,t.cajaTotem));
+  if(t.coverT+t.totemT>0||t.cajaCover+t.cajaTotem>0)c.appendChild(ctl("Taquilla + totem vs cajas COVER + TOTEM",t.coverT+t.totemT,t.cajaCover+t.cajaTotem));
 }
 
 function summary(s){
