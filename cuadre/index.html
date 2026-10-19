@@ -115,6 +115,15 @@ textarea{min-height:70px;resize:vertical}
   </section>
 
   <section>
+    <h2>Progresión de ingreso</h2>
+    <div class="ctl">Anota cuántas personas entraron en cada tramo de hora. Con eso se calcula el consumo promedio por persona.</div>
+    <div class="rows" id="r-prog"></div>
+    <div><button class="btn small" data-add="prog">+ Hora</button></div>
+    <div class="tot"><span>Total asistentes</span><span id="t-asis">0</span></div>
+    <div class="tot"><span>Consumo promedio por persona</span><span id="t-prom">S/ 0.00</span></div>
+  </section>
+
+  <section>
     <h2>Técnica y extras</h2>
     <div class="rows" id="r-extras"></div>
     <div><button class="btn small" data-add="extras">+ Extra</button></div>
@@ -192,7 +201,7 @@ function blank(fecha){return {fecha:fecha,resp:"",
   cover:[{item:"Entrada 40"},{item:"Entrada 30 con agua"},{item:"Guardarropa"}],
   totem:[{item:"Entrada 30"},{item:"Entrada 40"},{item:"Guardarropa"}],
   planilla:[{cargo:"Listas QR / taquilla",paga:"Marca"},{cargo:"Jefe seguridad",paga:"Marca"},{cargo:"Seguridad",paga:"Marca"},{cargo:"Jefe mozo",paga:"Marca"},{cargo:"Mantenimiento",paga:"Marca"},{cargo:"Jefa operativa",paga:"Marca"},{cargo:"Mozo/a",paga:"Local"},{cargo:"Cajera",paga:"Local"},{cargo:"Almacén",paga:"Local"}],
-  extras:[{concepto:"Cabina"},{concepto:"Técnica"}],otros:[],hielo:"",frutas:"",barraTaq:"",cprom:"",cluis:"",cnery:"",obs:""}}
+  extras:[{concepto:"Cabina"},{concepto:"Técnica"}],prog:[{hora:"22:00"},{hora:"23:00"},{hora:"00:00"},{hora:"01:00"},{hora:"02:00"},{hora:"03:00"}],otros:[],hielo:"",frutas:"",barraTaq:"",cprom:"",cluis:"",cnery:"",obs:""}}
 var S=blank(lastWed());
 var PHOTOS=[]; // {blob,tipo,nombre,url} pendientes de subir
 
@@ -202,7 +211,8 @@ var COLS={
   totem:[["item","Concepto","txt"],["cant","Cant","n"],["precio","Precio","n"],["totem","Totem","n"],["efectivo","Efectivo","n"]],
   planilla:[["cargo","Cargo","txt"],["nombre","Nombre","txt"],["monto","Monto S/","n"],["paga","Paga","sel",["Marca","Local"]]],
   extras:[["concepto","Concepto","txt"],["prov","Proveedor","txt"],["monto","Monto S/","n"]],
-  otros:[["concepto","Concepto","txt"],["monto","Monto S/","n"]]
+  otros:[["concepto","Concepto","txt"],["monto","Monto S/","n"]],
+  prog:[["hora","Hora","txt"],["personas","Personas que entraron","n"]]
 };
 function renderRows(key){
   var host=$("r-"+key);host.textContent="";
@@ -234,13 +244,15 @@ function calc(s){
     cajaCover:sum((s.cajas||[]).filter(function(r){return r.tipo==="COVER"}),tot),cajaTotem:sum((s.cajas||[]).filter(function(r){return r.tipo==="TOTEM"}),tot),
     planS:sum((s.planilla||[]).filter(function(r){return r.paga!=="Local"}),function(r){return r.monto}),
     planL:sum((s.planilla||[]).filter(function(r){return r.paga==="Local"}),function(r){return r.monto}),
-    extras:sum(s.extras,function(r){return r.monto})}
+    extras:sum(s.extras,function(r){return r.monto}),
+    asis:sum(s.prog,function(r){return r.personas}),
+    licor:sum((s.cajas||[]).filter(function(r){return r.tipo==="MOZO"||r.tipo==="CAJA"},tot),tot)+num(s.barraTaq)}
 }
 function ctl(label,a,b){var d=Math.round((a-b)*100)/100;var n=el("div",{text:label+": "+(d===0?"cuadra":"diferencia "+fmt(d)),class:"ctl "+(d===0?"ok":"bad")});return n}
 function totals(){
   var t=calc(S);
   $("t-cajas").textContent=fmt(t.cajas);$("t-cover").textContent=fmt(t.coverT);$("t-totem").textContent=fmt(t.totemT);
-  $("t-plan-s").textContent=fmt(t.planS);$("t-plan-l").textContent=fmt(t.planL);$("t-extras").textContent=fmt(t.extras);
+  $("t-plan-s").textContent=fmt(t.planS);$("t-plan-l").textContent=fmt(t.planL);$("t-extras").textContent=fmt(t.extras);$("t-asis").textContent=String(t.asis);$("t-prom").textContent=fmt(t.asis>0?t.licor/t.asis:0);
   $("b-caja").textContent=fmt(t.cajas);$("b-plan").textContent=fmt(t.planS+t.planL);
   var c=$("c-cajas");c.textContent="";
   if(t.cont>0)c.appendChild(ctl("Cajas vs contómetro",t.cajas,t.cont));
@@ -262,6 +274,9 @@ function summary(s){
   L.push("");L.push("PLANILLA");
   (s.planilla||[]).forEach(function(r){if(num(r.monto)||r.nombre)L.push("- "+r.cargo+" "+(r.nombre||"")+": "+num(r.monto).toFixed(2)+" ("+r.paga+")")});
   L.push("Marca: "+t.planS.toFixed(2)+"  Local: "+t.planL.toFixed(2));
+  L.push("");L.push("PROGRESIÓN DE INGRESO");
+  (s.prog||[]).forEach(function(r){if(num(r.personas))L.push("- "+r.hora+": "+num(r.personas))});
+  L.push("Total asistentes: "+t.asis+"  Consumo promedio: "+(t.asis>0?(t.licor/t.asis).toFixed(2):"0.00")+" (licor "+t.licor.toFixed(2)+")");
   L.push("");L.push("EXTRAS");
   (s.extras||[]).forEach(function(r){if(num(r.monto))L.push("- "+r.concepto+" "+(r.prov||"")+": "+num(r.monto).toFixed(2))});
   L.push("");L.push("GASTOS DEL LOCAL");
@@ -280,17 +295,17 @@ function copy(text){
 var dt=null;
 function draft(){clearTimeout(dt);dt=setTimeout(function(){store.set("cuadre-"+SLUG+"-draft",S)},400)}
 function clearNums(){
-  ["cajas","cover","totem","planilla","extras","otros"].forEach(function(k){(S[k]||[]).forEach(function(r){["efectivo","yape","pos","cont","cant","precio","totem","monto"].forEach(function(f){delete r[f]})})});
+  ["cajas","cover","totem","planilla","extras","otros","prog"].forEach(function(k){(S[k]||[]).forEach(function(r){["efectivo","yape","pos","cont","cant","precio","totem","monto","personas"].forEach(function(f){delete r[f]})})});
   S.otros=[];S.hielo=S.frutas=S.barraTaq=S.cprom=S.cluis=S.cnery=S.obs=""
 }
-(function load(){var d=store.get("cuadre-"+SLUG+"-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(S.fecha!==f){S.fecha=f;clearNums()}}
+(function load(){var d=store.get("cuadre-"+SLUG+"-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(!S.prog)S.prog=blank(f).prog;if(S.fecha!==f){S.fecha=f;clearNums()}}
 })();
 
 [["fecha","fecha"],["resp","resp"],["hielo","hielo"],["frutas","frutas"],["barraTaq","barraTaq"],["c-prom","cprom"],["c-luis","cluis"],["c-nery","cnery"],["obs","obs"]].forEach(function(p){
   $(p[0]).addEventListener("input",function(){S[p[1]]=$(p[0]).value;draft()});
 });
 
-document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-add");S[k].push({});renderRows(k)})});
+document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-add");(S[k]=S[k]||[]).push({});renderRows(k)})});
 
 function renderPhotos(){
   var h=$("photos");h.textContent="";

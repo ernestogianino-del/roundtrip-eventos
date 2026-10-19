@@ -218,6 +218,13 @@ function guardar_(b, m) {
   ]).setFontWeight('bold');
   var ext = (d.extras || []).map(function (r) { return [txt_(r.concepto), txt_(r.prov), num_(r.monto)]; });
   tabla_(ss, 'Extras', ['Concepto', 'Proveedor', 'Monto S/'], ext, [3]);
+  var prog = (d.prog || []).map(function (r) { return [txt_(r.hora), num_(r.personas)]; });
+  tabla_(ss, 'Progresion', ['Hora', 'Personas que entraron'], prog, [2]);
+  var asis = prog.reduce(function (a, r) { return a + r[1]; }, 0);
+  ss.getSheetByName('Progresion').getRange(prog.length + 4, 1, 2, 2).setValues([
+    ['Consumo promedio por persona (licor / asistentes)', asis > 0 ? r2_(c.ventaLicor / asis) : 0],
+    ['Licor vendido (sistema + taquilla)', r2_(c.ventaLicor)]
+  ]).setFontWeight('bold');
   var gastos = [['Hielo', num_(d.hielo)], ['Frutas para cócteles', num_(d.frutas)]];
   (d.otros || []).forEach(function (r) { gastos.push([txt_(r.concepto), num_(r.monto)]); });
   gastos.push(['Cortesías promotores y DJs', num_(d.cprom)], ['Cortesías Sr. Luis', num_(d.cluis)], ['Cortesías Srta. Nery', num_(d.cnery)]);
