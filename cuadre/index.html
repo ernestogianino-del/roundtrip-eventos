@@ -98,7 +98,7 @@ textarea{min-height:70px;resize:vertical}
     <div><button class="btn small" data-add="cover">+ Renglón</button></div>
     <div class="tot"><span>Total taquilla</span><span id="t-cover">S/ 0.00</span></div>
     <div class="grid">
-      <div class="fld"><label for="barraTaq">Barra vendida en taquilla (botellas) S/</label><input id="barraTaq" class="num" inputmode="decimal"></div>
+      <div class="fld"><label for="barraTaq">Licor vendido en taquilla y totem (total de la boleta) S/</label><input id="barraTaq" class="num" inputmode="decimal"></div>
     </div>
   </section>
 
@@ -254,7 +254,7 @@ function summary(s){
   L.push("Total cajas: "+t.cajas.toFixed(2)+"  Contómetro: "+t.cont.toFixed(2));
   L.push("");L.push("TAQUILLA");
   (s.cover||[]).forEach(function(r){if(r.cant||r.efectivo||r.yape)L.push("- "+r.item+": cant "+num(r.cant)+" x "+num(r.precio)+" | efectivo "+num(r.efectivo)+" | Yape "+num(r.yape))});
-  L.push("Total taquilla: "+t.coverT.toFixed(2)+"  Barra vendida en taquilla: "+num(s.barraTaq).toFixed(2));
+  L.push("Total taquilla: "+t.coverT.toFixed(2)+"  Licor vendido en taquilla y totem: "+num(s.barraTaq).toFixed(2));
   L.push("");L.push("TOTEM PASSLINE");
   (s.totem||[]).forEach(function(r){if(r.cant||r.totem||r.efectivo)L.push("- "+r.item+": cant "+num(r.cant)+" x "+num(r.precio)+" | totem "+num(r.totem)+" | efectivo "+num(r.efectivo))});
   L.push("Total totem: "+t.totemT.toFixed(2));
