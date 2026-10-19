@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Cuadre Sisifuz</title>
+<title>Cuadre de eventos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Archivo:wght@400;500;600;700&display=swap">
 <style>
@@ -62,15 +62,15 @@ textarea{min-height:70px;resize:vertical}
 <body>
 <div class="wrap">
   <div>
-    <h1>Cuadre Sisifuz</h1>
-    <p class="sub">Miércoles en Titanium. Llena los datos de la noche, sube las fotos y envía.</p>
+    <h1 id="h1">Cuadre de la noche</h1>
+    <p class="sub" id="sub">Llena los datos de la noche, sube las fotos y envía. El cuadre queda listo en el Drive.</p>
   </div>
   <div id="banner" class="banner" hidden></div>
 
   <section>
     <h2>Fecha y acceso</h2>
     <div class="grid">
-      <div class="fld"><label for="fecha">Miércoles</label><input id="fecha" type="date"></div>
+      <div class="fld"><label for="fecha">Fecha del evento</label><input id="fecha" type="date"></div>
       <div class="fld"><label for="resp">Quién llena</label><input id="resp" type="text" autocomplete="name"></div>
       <div class="fld"><label for="codigo">Código de acceso</label><input id="codigo" type="password" autocomplete="off"></div>
     </div>
@@ -106,7 +106,7 @@ textarea{min-height:70px;resize:vertical}
     <h2>Planilla operativa</h2>
     <div class="rows" id="r-planilla"></div>
     <div><button class="btn small" data-add="planilla">+ Persona</button></div>
-    <div class="tot"><span>Pagan Sisifuz</span><span id="t-plan-s">S/ 0.00</span></div>
+    <div class="tot"><span>Paga la marca</span><span id="t-plan-s">S/ 0.00</span></div>
     <div class="tot"><span>Paga el local</span><span id="t-plan-l">S/ 0.00</span></div>
   </section>
 
@@ -165,6 +165,11 @@ textarea{min-height:70px;resize:vertical}
 "use strict";
 // URL /exec del script de Google (apps-script/cuadre-sisifuz.gs). Vacía hasta publicar el script.
 var WEB_APP_URL = "";
+// Marcas con link propio: /cuadre/?m=<clave>. dia = día de la semana del evento (0=domingo ... 6=sábado).
+// Las reglas de cada marca y su código viven en la hoja privada de configuración, no aquí.
+var BRANDS = { sisifuz: { n: "Sisifuz", dia: 3 } };
+var SLUG = (new URLSearchParams(location.search).get("m") || "").toLowerCase().replace(/[^a-z0-9_-]/g,"");
+var BRAND = BRANDS[SLUG] || null;
 
 var $=function(id){return document.getElementById(id)};
 var num=function(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0};
@@ -172,12 +177,12 @@ var fmt=function(n){return "S/ "+n.toLocaleString("es-PE",{minimumFractionDigits
 function el(tag,attrs,kids){var e=document.createElement(tag);for(var k in (attrs||{})){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else e.setAttribute(k,attrs[k]);}(kids||[]).forEach(function(c){e.appendChild(c)});return e}
 var store={get:function(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 
-function lastWed(){var d=new Date();var back=(d.getDay()+4)%7;d.setDate(d.getDate()-back);var m=("0"+(d.getMonth()+1)).slice(-2),dd=("0"+d.getDate()).slice(-2);return d.getFullYear()+"-"+m+"-"+dd}
+function lastWed(){var d=new Date();var dia=BRAND?BRAND.dia:3;var back=(d.getDay()-dia+7)%7;d.setDate(d.getDate()-back);var m=("0"+(d.getMonth()+1)).slice(-2),dd=("0"+d.getDate()).slice(-2);return d.getFullYear()+"-"+m+"-"+dd}
 function blank(fecha){return {fecha:fecha,resp:"",
   cajas:[{tipo:"TOTEM"},{tipo:"MOZO"},{tipo:"MOZO"},{tipo:"CAJA"},{tipo:"COVER"}],
   cover:[{item:"Entrada 40"},{item:"Entrada 30 con agua"},{item:"Guardarropa"}],
   totem:[{item:"Entrada 30"},{item:"Entrada 40"},{item:"Guardarropa"}],
-  planilla:[{cargo:"Listas QR / taquilla",paga:"Sisifuz"},{cargo:"Jefe seguridad",paga:"Sisifuz"},{cargo:"Seguridad",paga:"Sisifuz"},{cargo:"Jefe mozo",paga:"Sisifuz"},{cargo:"Mantenimiento",paga:"Sisifuz"},{cargo:"Jefa operativa",paga:"Sisifuz"},{cargo:"Mozo/a",paga:"Local"},{cargo:"Cajera",paga:"Local"},{cargo:"Almacén",paga:"Local"}],
+  planilla:[{cargo:"Listas QR / taquilla",paga:"Marca"},{cargo:"Jefe seguridad",paga:"Marca"},{cargo:"Seguridad",paga:"Marca"},{cargo:"Jefe mozo",paga:"Marca"},{cargo:"Mantenimiento",paga:"Marca"},{cargo:"Jefa operativa",paga:"Marca"},{cargo:"Mozo/a",paga:"Local"},{cargo:"Cajera",paga:"Local"},{cargo:"Almacén",paga:"Local"}],
   extras:[{concepto:"Cabina"},{concepto:"Técnica"}],otros:[],hielo:"",frutas:"",barraTaq:"",cprom:"",cluis:"",cnery:"",obs:""}}
 var S=blank(lastWed());
 var PHOTOS=[]; // {blob,tipo,nombre,url} pendientes de subir
@@ -186,7 +191,7 @@ var COLS={
   cajas:[["tipo","Tipo","sel",["TOTEM","MOZO","CAJA","COVER"]],["resp","Responsable","txt"],["efectivo","Efectivo","n"],["yape","Yape Luis","n"],["pos","Culqui (POS)","n"],["cont","Contómetro","n"]],
   cover:[["item","Concepto","txt"],["cant","Cant","n"],["precio","Precio","n"],["efectivo","Efectivo","n"],["yape","Yape","n"]],
   totem:[["item","Concepto","txt"],["cant","Cant","n"],["precio","Precio","n"],["totem","Totem","n"],["efectivo","Efectivo","n"]],
-  planilla:[["cargo","Cargo","txt"],["nombre","Nombre","txt"],["monto","Monto S/","n"],["paga","Paga","sel",["Sisifuz","Local"]]],
+  planilla:[["cargo","Cargo","txt"],["nombre","Nombre","txt"],["monto","Monto S/","n"],["paga","Paga","sel",["Marca","Local"]]],
   extras:[["concepto","Concepto","txt"],["prov","Proveedor","txt"],["monto","Monto S/","n"]],
   otros:[["concepto","Concepto","txt"],["monto","Monto S/","n"]]
 };
@@ -236,7 +241,7 @@ function totals(){
 
 function summary(s){
   var t=calc(s),L=[];
-  L.push("CUADRE SISIFUZ "+s.fecha+" (Titanium)"+(s.resp?" - llenó "+s.resp:""));
+  L.push("CUADRE "+(BRAND?BRAND.n.toUpperCase():"")+" "+s.fecha+(s.resp?" - llenó "+s.resp:""));
   L.push("");L.push("CAJAS (efectivo / Yape / POS / contómetro)");
   (s.cajas||[]).forEach(function(r){L.push("- "+r.tipo+" "+(r.resp||"")+": "+num(r.efectivo)+" / "+num(r.yape)+" / "+num(r.pos)+" / "+num(r.cont))});
   L.push("Total cajas: "+t.cajas.toFixed(2)+"  Contómetro: "+t.cont.toFixed(2));
@@ -248,7 +253,7 @@ function summary(s){
   L.push("Total totem: "+t.totemT.toFixed(2));
   L.push("");L.push("PLANILLA");
   (s.planilla||[]).forEach(function(r){if(num(r.monto)||r.nombre)L.push("- "+r.cargo+" "+(r.nombre||"")+": "+num(r.monto).toFixed(2)+" ("+r.paga+")")});
-  L.push("Sisifuz: "+t.planS.toFixed(2)+"  Local: "+t.planL.toFixed(2));
+  L.push("Marca: "+t.planS.toFixed(2)+"  Local: "+t.planL.toFixed(2));
   L.push("");L.push("EXTRAS");
   (s.extras||[]).forEach(function(r){if(num(r.monto))L.push("- "+r.concepto+" "+(r.prov||"")+": "+num(r.monto).toFixed(2))});
   L.push("");L.push("GASTOS DEL LOCAL");
@@ -265,18 +270,18 @@ function copy(text){
 }
 
 var dt=null;
-function draft(){clearTimeout(dt);dt=setTimeout(function(){store.set("cuadre-sisifuz-draft",S)},400)}
+function draft(){clearTimeout(dt);dt=setTimeout(function(){store.set("cuadre-"+SLUG+"-draft",S)},400)}
 function clearNums(){
   ["cajas","cover","totem","planilla","extras","otros"].forEach(function(k){(S[k]||[]).forEach(function(r){["efectivo","yape","pos","cont","cant","precio","totem","monto"].forEach(function(f){delete r[f]})})});
   S.otros=[];S.hielo=S.frutas=S.barraTaq=S.cprom=S.cluis=S.cnery=S.obs=""
 }
-(function load(){var d=store.get("cuadre-sisifuz-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(S.fecha!==f){S.fecha=f;clearNums()}}
-  var c=store.get("cuadre-sisifuz-codigo");if(c)$("codigo").value=c})();
+(function load(){var d=store.get("cuadre-"+SLUG+"-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(S.fecha!==f){S.fecha=f;clearNums()}}
+  var c=store.get("cuadre-"+SLUG+"-codigo");if(c)$("codigo").value=c})();
 
 [["fecha","fecha"],["resp","resp"],["hielo","hielo"],["frutas","frutas"],["barraTaq","barraTaq"],["c-prom","cprom"],["c-luis","cluis"],["c-nery","cnery"],["obs","obs"]].forEach(function(p){
   $(p[0]).addEventListener("input",function(){S[p[1]]=$(p[0]).value;draft()});
 });
-$("codigo").addEventListener("input",function(){store.set("cuadre-sisifuz-codigo",$("codigo").value)});
+$("codigo").addEventListener("input",function(){store.set("cuadre-"+SLUG+"-codigo",$("codigo").value)});
 document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-add");S[k].push({});renderRows(k)})});
 
 function renderPhotos(){
@@ -299,7 +304,7 @@ function shrink(file){return new Promise(function(res,rej){
   im.onerror=function(){URL.revokeObjectURL(url);rej(new Error("Archivo no es una imagen"))};im.src=url})}
 
 async function post(payload){
-  var r=await fetch(WEB_APP_URL,{method:"POST",body:JSON.stringify(payload),redirect:"follow"});
+  var r=await fetch(WEB_APP_URL,{method:"POST",body:JSON.stringify(Object.assign({m:SLUG},payload)),redirect:"follow"});
   var j=await r.json();
   if(!j.ok)throw new Error(j.error==="codigo"?"Código incorrecto":(j.error||"Error del servidor"));
   return j;
@@ -325,7 +330,9 @@ $("b-send").addEventListener("click",async function(){
   btn.disabled=false;
 });
 
-if(!WEB_APP_URL){var b=$("banner");b.hidden=false;b.textContent="Envío no activado todavía: puedes llenar el cuadre y copiar el resumen."}
+if(!BRAND){var b0=$("banner");b0.hidden=false;b0.textContent="Este link no es válido. Pídele a Luis el link de tu marca.";document.querySelectorAll("section,.bar").forEach(function(n){n.hidden=true})}
+else{$("h1").textContent="Cuadre "+BRAND.n;document.title="Cuadre "+BRAND.n}
+if(BRAND&&!WEB_APP_URL){var b=$("banner");b.hidden=false;b.textContent="Envío no activado todavía: puedes llenar el cuadre y copiar el resumen."}
 renderAll();
 })();
 </script>
