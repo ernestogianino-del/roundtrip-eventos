@@ -97,9 +97,6 @@ textarea{min-height:70px;resize:vertical}
     <div class="rows" id="r-cover"></div>
     <div><button class="btn small" data-add="cover">+ Renglón</button></div>
     <div class="tot"><span>Total taquilla</span><span id="t-cover">S/ 0.00</span></div>
-    <div class="grid">
-      <div class="fld"><label for="barraTaq">Licor vendido en taquilla y totem (total de la boleta) S/</label><input id="barraTaq" class="num" inputmode="decimal"></div>
-    </div>
   </section>
 
   <section>
@@ -126,6 +123,10 @@ textarea{min-height:70px;resize:vertical}
 
   <section>
     <h2>Gastos del local y cortesías</h2>
+    <div class="grid">
+      <div class="fld"><label for="barraTaq">Licor vendido en taquilla y totem S/</label><input id="barraTaq" class="num" inputmode="decimal"></div>
+    </div>
+    <div class="ctl">Es el total de licor que aparece en la boleta de taquilla. Se usa para el costo de insumos y el tramo de alquiler, no suma a la taquilla.</div>
     <div class="grid">
       <div class="fld"><label for="hielo">Hielo S/</label><input id="hielo" class="num" inputmode="decimal"></div>
       <div class="fld"><label for="frutas">Frutas para cócteles S/</label><input id="frutas" class="num" inputmode="decimal"></div>
