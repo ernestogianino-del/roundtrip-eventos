@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Cuadre Sisifuz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0b0b0f; --panel:#141422; --line:#2a2a40; --field:#0f0f18; --ink:#f4f2fa; --muted:#a29db4;
+  --accent:#7c3aed; --accent-soft:#9d6bff; --good:#6ee7a8; --bad:#ff7c8a; --warn:#ffcf70;
+  --display:"Unbounded","Archivo",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:640px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px));padding-block:20px 150px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:800;font-size:26px;margin:0}
+.sub{color:var(--muted);margin:0}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld label{font-size:12px;color:var(--muted)}
+input,select,textarea{width:100%;min-width:0;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:10px;padding:10px;font:inherit}
+input.num{font-family:var(--mono);text-align:right}
+textarea{min-height:70px;resize:vertical}
+:focus-visible{outline:2px solid var(--accent-soft);outline-offset:2px}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.row .del{justify-self:end}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.tot{display:flex;justify-content:space-between;gap:12px;font-weight:600;padding-top:6px;border-top:1px dashed var(--line)}
+.tot span:last-child,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ctl{font-size:13px;color:var(--muted)}
+.ctl.ok{color:var(--good)} .ctl.bad{color:var(--bad)}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.ph{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--field);aspect-ratio:1/1}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph span{position:absolute;left:0;right:0;bottom:0;font-size:11px;padding:2px 6px;background:rgba(0,0,0,.7)}
+.ph button{position:absolute;top:4px;right:4px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
+.bar-in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.bar-top{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.k{font-size:12px;color:var(--muted)} .v{font-family:var(--mono);font-weight:600}
+.msg{font-size:13px;min-height:18px}
+.msg.ok{color:var(--good)} .msg.bad{color:var(--bad)}
+.banner{border:1px solid var(--warn);border-radius:12px;padding:12px 14px;background:var(--panel);color:var(--warn)}
+@media (prefers-reduced-motion:no-preference){.btn{transition:background .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Cuadre Sisifuz</h1>
+    <p class="sub">Miércoles en Titanium. Llena los datos de la noche, sube las fotos y envía.</p>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+
+  <section>
+    <h2>Fecha y acceso</h2>
+    <div class="grid">
+      <div class="fld"><label for="fecha">Miércoles</label><input id="fecha" type="date"></div>
+      <div class="fld"><label for="resp">Quién llena</label><input id="resp" type="text" autocomplete="name"></div>
+      <div class="fld"><label for="codigo">Código de acceso</label><input id="codigo" type="password" autocomplete="off"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reporte de caja</h2>
+    <div class="ctl">Un renglón por caja. Contómetro es el total que marca el reporte del sistema.</div>
+    <div class="rows" id="r-cajas"></div>
+    <div><button class="btn small" data-add="cajas">+ Caja</button></div>
+    <div class="tot"><span>Total cajas</span><span id="t-cajas">S/ 0.00</span></div>
+    <div id="c-cajas" class="ctl"></div>
+  </section>
+
+  <section>
+    <h2>Taquilla (cover)</h2>
+    <div class="rows" id="r-cover"></div>
+    <div><button class="btn small" data-add="cover">+ Renglón</button></div>
+    <div class="tot"><span>Total taquilla</span><span id="t-cover">S/ 0.00</span></div>
+    <div class="grid">
+      <div class="fld"><label for="barraTaq">Barra vendida en taquilla (botellas) S/</label><input id="barraTaq" class="num" inputmode="decimal"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Totem Passline</h2>
+    <div class="rows" id="r-totem"></div>
+    <div><button class="btn small" data-add="totem">+ Renglón</button></div>
+    <div class="tot"><span>Total totem</span><span id="t-totem">S/ 0.00</span></div>
+  </section>
+
+  <section>
+    <h2>Planilla operativa</h2>
+    <div class="rows" id="r-planilla"></div>
+    <div><button class="btn small" data-add="planilla">+ Persona</button></div>
+    <div class="tot"><span>Pagan Sisifuz</span><span id="t-plan-s">S/ 0.00</span></div>
+    <div class="tot"><span>Paga el local</span><span id="t-plan-l">S/ 0.00</span></div>
+  </section>
+
+  <section>
+    <h2>Técnica y extras</h2>
+    <div class="rows" id="r-extras"></div>
+    <div><button class="btn small" data-add="extras">+ Extra</button></div>
+    <div class="tot"><span>Total extras</span><span id="t-extras">S/ 0.00</span></div>
+  </section>
+
+  <section>
+    <h2>Gastos del local y cortesías</h2>
+    <div class="grid">
+      <div class="fld"><label for="hielo">Hielo S/</label><input id="hielo" class="num" inputmode="decimal"></div>
+      <div class="fld"><label for="frutas">Frutas para cócteles S/</label><input id="frutas" class="num" inputmode="decimal"></div>
+    </div>
+    <div class="rows" id="r-otros"></div>
+    <div><button class="btn small" data-add="otros">+ Otro gasto del local</button></div>
+    <div class="grid">
+      <div class="fld"><label for="c-prom">Cortesías promotores y DJs S/</label><input id="c-prom" class="num" inputmode="decimal"></div>
+      <div class="fld"><label for="c-luis">Cortesías Sr. Luis S/</label><input id="c-luis" class="num" inputmode="decimal"></div>
+      <div class="fld"><label for="c-nery">Cortesías Srta. Nery S/</label><input id="c-nery" class="num" inputmode="decimal"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fotos</h2>
+    <div class="ctl">Reporte de ventas, taquilla, planilla y comprobantes. Se guardan en la carpeta de esta fecha.</div>
+    <div class="grid">
+      <div class="fld"><label for="ph-tipo">Tipo de foto</label>
+        <select id="ph-tipo"><option>Reporte de ventas</option><option>Taquilla</option><option>Planilla</option><option>Comprobante de gasto</option><option>Totem Passline</option><option>Otro</option></select></div>
+      <div class="fld"><label for="ph-file">Elegir fotos</label><input id="ph-file" type="file" accept="image/*" multiple></div>
+    </div>
+    <div class="photos" id="photos"></div>
+  </section>
+
+  <section>
+    <h2>Observaciones</h2>
+    <textarea id="obs" placeholder="Errores del sistema, faltantes, algo que Luis deba saber"></textarea>
+  </section>
+</div>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="bar-top">
+      <div><div class="k">Total caja</div><div class="v" id="b-caja">S/ 0.00</div></div>
+      <div><div class="k">Planilla</div><div class="v" id="b-plan">S/ 0.00</div></div>
+      <div style="display:flex;gap:8px"><button class="btn" id="b-copy">Copiar resumen</button><button class="btn primary" id="b-send">Enviar cuadre</button></div>
+    </div>
+    <div class="msg" id="send-msg" role="status"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+// URL /exec del script de Google (apps-script/cuadre-sisifuz.gs). Vacía hasta publicar el script.
+var WEB_APP_URL = "";
+
+var $=function(id){return document.getElementById(id)};
+var num=function(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0};
+var fmt=function(n){return "S/ "+n.toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2})};
+function el(tag,attrs,kids){var e=document.createElement(tag);for(var k in (attrs||{})){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else e.setAttribute(k,attrs[k]);}(kids||[]).forEach(function(c){e.appendChild(c)});return e}
+var store={get:function(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+function lastWed(){var d=new Date();var back=(d.getDay()+4)%7;d.setDate(d.getDate()-back);var m=("0"+(d.getMonth()+1)).slice(-2),dd=("0"+d.getDate()).slice(-2);return d.getFullYear()+"-"+m+"-"+dd}
+function blank(fecha){return {fecha:fecha,resp:"",
+  cajas:[{tipo:"TOTEM"},{tipo:"MOZO"},{tipo:"MOZO"},{tipo:"CAJA"},{tipo:"COVER"}],
+  cover:[{item:"Entrada 40"},{item:"Entrada 30 con agua"},{item:"Guardarropa"}],
+  totem:[{item:"Entrada 30"},{item:"Entrada 40"},{item:"Guardarropa"}],
+  planilla:[{cargo:"Listas QR / taquilla",paga:"Sisifuz"},{cargo:"Jefe seguridad",paga:"Sisifuz"},{cargo:"Seguridad",paga:"Sisifuz"},{cargo:"Jefe mozo",paga:"Sisifuz"},{cargo:"Mantenimiento",paga:"Sisifuz"},{cargo:"Jefa operativa",paga:"Sisifuz"},{cargo:"Mozo/a",paga:"Local"},{cargo:"Cajera",paga:"Local"},{cargo:"Almacén",paga:"Local"}],
+  extras:[{concepto:"Cabina"},{concepto:"Técnica"}],otros:[],hielo:"",frutas:"",barraTaq:"",cprom:"",cluis:"",cnery:"",obs:""}}
+var S=blank(lastWed());
+var PHOTOS=[]; // {blob,tipo,nombre,url} pendientes de subir
+
+var COLS={
+  cajas:[["tipo","Tipo","sel",["TOTEM","MOZO","CAJA","COVER"]],["resp","Responsable","txt"],["efectivo","Efectivo","n"],["yape","Yape Luis","n"],["pos","Culqui (POS)","n"],["cont","Contómetro","n"]],
+  cover:[["item","Concepto","txt"],["cant","Cant","n"],["precio","Precio","n"],["efectivo","Efectivo","n"],["yape","Yape","n"]],
+  totem:[["item","Concepto","txt"],["cant","Cant","n"],["precio","Precio","n"],["totem","Totem","n"],["efectivo","Efectivo","n"]],
+  planilla:[["cargo","Cargo","txt"],["nombre","Nombre","txt"],["monto","Monto S/","n"],["paga","Paga","sel",["Sisifuz","Local"]]],
+  extras:[["concepto","Concepto","txt"],["prov","Proveedor","txt"],["monto","Monto S/","n"]],
+  otros:[["concepto","Concepto","txt"],["monto","Monto S/","n"]]
+};
+function renderRows(key){
+  var host=$("r-"+key);host.textContent="";
+  (S[key]||[]).forEach(function(row,i){
+    var r=el("div",{class:"row"});
+    COLS[key].forEach(function(c){
+      var f=el("div",{class:"fld"});var id="f-"+key+"-"+i+"-"+c[0];
+      f.appendChild(el("label",{for:id,text:c[1]}));
+      var inp;
+      if(c[2]==="sel"){inp=el("select",{id:id});c[3].forEach(function(o){var op=el("option",{text:o});op.value=o;inp.appendChild(op)});inp.value=row[c[0]]||c[3][0];row[c[0]]=inp.value}
+      else{inp=el("input",{id:id,type:"text"});if(c[2]==="n"){inp.className="num";inp.setAttribute("inputmode","decimal")}inp.value=row[c[0]]==null?"":row[c[0]]}
+      inp.addEventListener("input",function(){row[c[0]]=inp.value;totals();draft()});
+      f.appendChild(inp);r.appendChild(f);
+    });
+    var d=el("button",{class:"btn small del",text:"Quitar","aria-label":"Quitar renglón"});
+    d.addEventListener("click",function(){S[key].splice(i,1);renderRows(key);totals();draft()});
+    r.appendChild(d);host.appendChild(r);
+  });
+}
+function renderAll(){Object.keys(COLS).forEach(renderRows);
+  $("fecha").value=S.fecha;$("resp").value=S.resp||"";$("hielo").value=S.hielo;$("frutas").value=S.frutas;$("barraTaq").value=S.barraTaq;
+  $("c-prom").value=S.cprom;$("c-luis").value=S.cluis;$("c-nery").value=S.cnery;$("obs").value=S.obs;renderPhotos();totals()}
+
+function sum(arr,f){return (arr||[]).reduce(function(a,r){return a+num(f(r))},0)}
+function calc(s){
+  var tot=function(r){return num(r.efectivo)+num(r.yape)+num(r.pos)};
+  return {cajas:sum(s.cajas,tot),cont:sum(s.cajas,function(r){return r.cont}),
+    coverT:sum(s.cover,function(r){return num(r.efectivo)+num(r.yape)}),totemT:sum(s.totem,function(r){return num(r.totem)+num(r.efectivo)}),
+    cajaCover:sum((s.cajas||[]).filter(function(r){return r.tipo==="COVER"}),tot),cajaTotem:sum((s.cajas||[]).filter(function(r){return r.tipo==="TOTEM"}),tot),
+    planS:sum((s.planilla||[]).filter(function(r){return r.paga!=="Local"}),function(r){return r.monto}),
+    planL:sum((s.planilla||[]).filter(function(r){return r.paga==="Local"}),function(r){return r.monto}),
+    extras:sum(s.extras,function(r){return r.monto})}
+}
+function ctl(label,a,b){var d=Math.round((a-b)*100)/100;var n=el("div",{text:label+": "+(d===0?"cuadra":"diferencia "+fmt(d)),class:"ctl "+(d===0?"ok":"bad")});return n}
+function totals(){
+  var t=calc(S);
+  $("t-cajas").textContent=fmt(t.cajas);$("t-cover").textContent=fmt(t.coverT);$("t-totem").textContent=fmt(t.totemT);
+  $("t-plan-s").textContent=fmt(t.planS);$("t-plan-l").textContent=fmt(t.planL);$("t-extras").textContent=fmt(t.extras);
+  $("b-caja").textContent=fmt(t.cajas);$("b-plan").textContent=fmt(t.planS+t.planL);
+  var c=$("c-cajas");c.textContent="";
+  if(t.cont>0)c.appendChild(ctl("Cajas vs contómetro",t.cajas,t.cont));
+  if(t.coverT>0||t.cajaCover>0)c.appendChild(ctl("Taquilla vs caja COVER",t.coverT,t.cajaCover));
+  if(t.totemT>0||t.cajaTotem>0)c.appendChild(ctl("Totem vs caja TOTEM",t.totemT,t.cajaTotem));
+}
+
+function summary(s){
+  var t=calc(s),L=[];
+  L.push("CUADRE SISIFUZ "+s.fecha+" (Titanium)"+(s.resp?" - llenó "+s.resp:""));
+  L.push("");L.push("CAJAS (efectivo / Yape / POS / contómetro)");
+  (s.cajas||[]).forEach(function(r){L.push("- "+r.tipo+" "+(r.resp||"")+": "+num(r.efectivo)+" / "+num(r.yape)+" / "+num(r.pos)+" / "+num(r.cont))});
+  L.push("Total cajas: "+t.cajas.toFixed(2)+"  Contómetro: "+t.cont.toFixed(2));
+  L.push("");L.push("TAQUILLA");
+  (s.cover||[]).forEach(function(r){if(r.cant||r.efectivo||r.yape)L.push("- "+r.item+": cant "+num(r.cant)+" x "+num(r.precio)+" | efectivo "+num(r.efectivo)+" | Yape "+num(r.yape))});
+  L.push("Total taquilla: "+t.coverT.toFixed(2)+"  Barra vendida en taquilla: "+num(s.barraTaq).toFixed(2));
+  L.push("");L.push("TOTEM PASSLINE");
+  (s.totem||[]).forEach(function(r){if(r.cant||r.totem||r.efectivo)L.push("- "+r.item+": cant "+num(r.cant)+" x "+num(r.precio)+" | totem "+num(r.totem)+" | efectivo "+num(r.efectivo))});
+  L.push("Total totem: "+t.totemT.toFixed(2));
+  L.push("");L.push("PLANILLA");
+  (s.planilla||[]).forEach(function(r){if(num(r.monto)||r.nombre)L.push("- "+r.cargo+" "+(r.nombre||"")+": "+num(r.monto).toFixed(2)+" ("+r.paga+")")});
+  L.push("Sisifuz: "+t.planS.toFixed(2)+"  Local: "+t.planL.toFixed(2));
+  L.push("");L.push("EXTRAS");
+  (s.extras||[]).forEach(function(r){if(num(r.monto))L.push("- "+r.concepto+" "+(r.prov||"")+": "+num(r.monto).toFixed(2))});
+  L.push("");L.push("GASTOS DEL LOCAL");
+  L.push("- Hielo: "+num(s.hielo).toFixed(2));L.push("- Frutas: "+num(s.frutas).toFixed(2));
+  (s.otros||[]).forEach(function(r){if(num(r.monto))L.push("- "+r.concepto+": "+num(r.monto).toFixed(2))});
+  L.push("CORTESÍAS: promotores y DJs "+num(s.cprom).toFixed(2)+" | Luis "+num(s.cluis).toFixed(2)+" | Nery "+num(s.cnery).toFixed(2));
+  if(s.obs){L.push("");L.push("OBSERVACIONES: "+s.obs)}
+  return L.join("\n");
+}
+function setMsg(text,cls){var m=$("send-msg");m.textContent=text;m.className="msg"+(cls?" "+cls:"")}
+function copy(text){
+  function fb(){var ta=el("textarea");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");setMsg("Resumen copiado.","ok")}catch(e){setMsg("No se pudo copiar.","bad")}ta.remove()}
+  try{navigator.clipboard.writeText(text).then(function(){setMsg("Resumen copiado.","ok")},fb)}catch(e){fb()}
+}
+
+var dt=null;
+function draft(){clearTimeout(dt);dt=setTimeout(function(){store.set("cuadre-sisifuz-draft",S)},400)}
+function clearNums(){
+  ["cajas","cover","totem","planilla","extras","otros"].forEach(function(k){(S[k]||[]).forEach(function(r){["efectivo","yape","pos","cont","cant","precio","totem","monto"].forEach(function(f){delete r[f]})})});
+  S.otros=[];S.hielo=S.frutas=S.barraTaq=S.cprom=S.cluis=S.cnery=S.obs=""
+}
+(function load(){var d=store.get("cuadre-sisifuz-draft");if(d&&d.cajas){var f=S.fecha;S=d;if(S.fecha!==f){S.fecha=f;clearNums()}}
+  var c=store.get("cuadre-sisifuz-codigo");if(c)$("codigo").value=c})();
+
+[["fecha","fecha"],["resp","resp"],["hielo","hielo"],["frutas","frutas"],["barraTaq","barraTaq"],["c-prom","cprom"],["c-luis","cluis"],["c-nery","cnery"],["obs","obs"]].forEach(function(p){
+  $(p[0]).addEventListener("input",function(){S[p[1]]=$(p[0]).value;draft()});
+});
+$("codigo").addEventListener("input",function(){store.set("cuadre-sisifuz-codigo",$("codigo").value)});
+document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-add");S[k].push({});renderRows(k)})});
+
+function renderPhotos(){
+  var h=$("photos");h.textContent="";
+  PHOTOS.forEach(function(f,i){
+    var w=el("div",{class:"ph"});var im=el("img",{alt:f.tipo});im.src=f.url;w.appendChild(im);w.appendChild(el("span",{text:f.tipo}));
+    var x=el("button",{class:"btn small",text:"×","aria-label":"Quitar foto"});x.addEventListener("click",function(){URL.revokeObjectURL(f.url);PHOTOS.splice(i,1);renderPhotos()});
+    w.appendChild(x);h.appendChild(w);
+  });
+}
+$("ph-file").addEventListener("change",function(ev){
+  Array.prototype.slice.call(ev.target.files||[]).forEach(function(f){PHOTOS.push({blob:f,tipo:$("ph-tipo").value,nombre:f.name,url:URL.createObjectURL(f)})});
+  ev.target.value="";renderPhotos();
+});
+function shrink(file){return new Promise(function(res,rej){
+  var url=URL.createObjectURL(file);var im=new Image();
+  im.onload=function(){var m=1800,s=Math.min(1,m/Math.max(im.width,im.height));var c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+    c.toBlob(function(b){if(!b)return rej(new Error("No se pudo preparar la foto"));var fr=new FileReader();fr.onload=function(){res(String(fr.result).split(",")[1])};fr.onerror=function(){rej(new Error("No se pudo leer la foto"))};fr.readAsDataURL(b)},"image/jpeg",0.82)};
+  im.onerror=function(){URL.revokeObjectURL(url);rej(new Error("Archivo no es una imagen"))};im.src=url})}
+
+async function post(payload){
+  var r=await fetch(WEB_APP_URL,{method:"POST",body:JSON.stringify(payload),redirect:"follow"});
+  var j=await r.json();
+  if(!j.ok)throw new Error(j.error==="codigo"?"Código incorrecto":(j.error||"Error del servidor"));
+  return j;
+}
+$("b-copy").addEventListener("click",function(){copy(summary(S))});
+$("b-send").addEventListener("click",async function(){
+  var btn=$("b-send");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(S.fecha||"")){setMsg("Elige la fecha.","bad");return}
+  if(!WEB_APP_URL){setMsg("El envío todavía no está activado. Copia el resumen y mándalo por WhatsApp.","bad");return}
+  var code=$("codigo").value;if(!code){setMsg("Escribe el código de acceso.","bad");return}
+  btn.disabled=true;setMsg("Enviando datos…");
+  try{
+    await post({action:"save",code:code,fecha:S.fecha,data:S,resumen:summary(S)});
+    var n=PHOTOS.length;
+    for(var i=0;i<n;i++){
+      setMsg("Subiendo foto "+(i+1)+" de "+n+"…");
+      var p=PHOTOS[0];var b64=await shrink(p.blob);
+      await post({action:"photo",code:code,fecha:S.fecha,tipo:p.tipo,nombre:p.nombre,mime:"image/jpeg",b64:b64});
+      URL.revokeObjectURL(p.url);PHOTOS.shift();renderPhotos();
+    }
+    setMsg("Enviado a las "+new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})+(n?" con "+n+" foto(s).":"."),"ok");
+  }catch(e){setMsg("No se pudo enviar: "+((e&&e.message)||"error")+". Lo que ya subió queda guardado; vuelve a intentar.","bad")}
+  btn.disabled=false;
+});
+
+if(!WEB_APP_URL){var b=$("banner");b.hidden=false;b.textContent="Envío no activado todavía: puedes llenar el cuadre y copiar el resumen."}
+renderAll();
+})();
+</script>
+</body>
+</html>
